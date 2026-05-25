@@ -55,7 +55,7 @@ def schild_ladder(
         # Single rung: midpoint construction
         mid = metric.exp(tangent_vec / 2.0, base_point)
         log_end_to_mid = metric.log(mid, end_point)
-        transported = 2.0 * log_end_to_mid
+        transported: np.ndarray = 2.0 * log_end_to_mid
         return transported
 
     # Multi-rung: subdivide the geodesic

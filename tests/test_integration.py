@@ -30,7 +30,8 @@ def _rotation_matrix(axis: np.ndarray, angle: float) -> np.ndarray:
             [-axis[1], axis[0], 0],
         ]
     )
-    return np.eye(3) + np.sin(angle) * K + (1 - np.cos(angle)) * (K @ K)
+    result: np.ndarray = np.eye(3) + np.sin(angle) * K + (1 - np.cos(angle)) * (K @ K)
+    return result
 
 
 class TestFederatedPipeline:

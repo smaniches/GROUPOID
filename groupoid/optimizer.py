@@ -62,20 +62,21 @@ class RiemannianSGD:
         riemannian_grad = self.manifold.to_tangent(euclidean_grad, point)
 
         # Apply momentum
+        vel: np.ndarray
         if self.momentum > 0:
             if self._velocity is None:
-                self._velocity = riemannian_grad
+                vel = riemannian_grad
             else:
-                # Transport previous velocity to current tangent space
-                self._velocity = self.manifold.to_tangent(
+                vel = self.manifold.to_tangent(
                     self.momentum * self._velocity + riemannian_grad, point
                 )
-            update = -self.lr * self._velocity
+            self._velocity = vel
+            update = -self.lr * vel
         else:
             update = -self.lr * riemannian_grad
 
         # Retract to manifold via exponential map
-        new_point = self.manifold.metric.exp(update, point)
+        new_point: np.ndarray = self.manifold.metric.exp(update, point)
 
         return new_point
 
@@ -133,25 +134,27 @@ class RiemannianAdam:
         grad_norm_sq = float(np.sum(grad**2))
 
         # Update biased first moment (tangent vector)
+        first_moment: np.ndarray
         if self._m is None:
-            self._m = grad.copy()
+            first_moment = grad.copy()
         else:
-            self._m = self.manifold.to_tangent(
+            first_moment = self.manifold.to_tangent(
                 self.beta1 * self._m + (1 - self.beta1) * grad, point
             )
+        self._m = first_moment
 
         # Update biased second moment (scalar, norm-based)
         self._v = self.beta2 * self._v + (1 - self.beta2) * grad_norm_sq
 
         # Bias correction
-        m_hat = self._m / (1 - self.beta1**self._t)
+        m_hat = first_moment / (1 - self.beta1**self._t)
         v_hat = self._v / (1 - self.beta2**self._t)
 
         # Adaptive update
         update = -self.lr * m_hat / (np.sqrt(v_hat) + self.eps)
         update = self.manifold.to_tangent(update, point)
 
-        new_point = self.manifold.metric.exp(update, point)
+        new_point: np.ndarray = self.manifold.metric.exp(update, point)
         return new_point
 
 
@@ -191,7 +194,7 @@ def curvature_adaptive_lr(
             kappa = float(np.mean(kappa)) if hasattr(kappa, "__len__") else float(kappa)
 
             # Scale: lr / (1 + max(kappa, 0)) damps in positive curvature
-            adapted = base_lr / (1.0 + max(kappa, 0.0))
+            adapted: float = base_lr / (1.0 + max(kappa, 0.0))
             logger.debug("Curvature-adapted LR: {:.6f} (kappa={:.4f})", adapted, kappa)
             return adapted
     except (AttributeError, NotImplementedError):
