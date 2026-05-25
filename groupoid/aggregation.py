@@ -157,7 +157,8 @@ class TransportGroupoidAggregator:
                 transport_residuals[node] = 0.0
             else:
                 T = self._get_transport_to_base(node)
-                assert T is not None
+                if T is None:
+                    raise ValueError(f"No transport path from {node} to {self.base_node}")
                 transported_params = T @ params
                 transported[node] = transported_params
                 transport_residuals[node] = float(
@@ -183,7 +184,8 @@ class TransportGroupoidAggregator:
                 local_updates[node] = global_params
             else:
                 T = self._get_transport_to_base(node)
-                assert T is not None
+                if T is None:
+                    raise ValueError(f"No transport path from {node} to {self.base_node}")
                 T_inv = np.linalg.inv(T)
                 local_updates[node] = T_inv @ global_params
 

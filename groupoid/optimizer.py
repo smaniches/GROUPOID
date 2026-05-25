@@ -14,6 +14,7 @@ This module provides:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 from loguru import logger
@@ -37,7 +38,7 @@ class RiemannianSGD:
         Momentum coefficient (0 = no momentum).
     """
 
-    manifold: object
+    manifold: Any
     lr: float = 0.01
     momentum: float = 0.0
     _velocity: np.ndarray | None = field(default=None, init=False, repr=False)
@@ -101,7 +102,7 @@ class RiemannianAdam:
         Small constant for numerical stability.
     """
 
-    manifold: object
+    manifold: Any
     lr: float = 0.001
     beta1: float = 0.9
     beta2: float = 0.999
