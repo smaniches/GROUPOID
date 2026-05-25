@@ -18,9 +18,7 @@ class Sheaf:
         self._restriction_maps: dict[tuple[str, str], np.ndarray] = {}
         self._sections: dict[str, np.ndarray] = {}
 
-    def set_restriction_map(
-        self, source: str, target: str, matrix: np.ndarray
-    ) -> None:
+    def set_restriction_map(self, source: str, target: str, matrix: np.ndarray) -> None:
         """Set the restriction map for an edge."""
         self._restriction_maps[(source, target)] = matrix
         logger.debug("Set restriction map {} -> {}", source, target)
@@ -57,9 +55,7 @@ class Sheaf:
         R = self._restriction_maps[(source, target)]
         return R @ section
 
-    def restrict_along_path(
-        self, section: np.ndarray, path: list[str]
-    ) -> np.ndarray:
+    def restrict_along_path(self, section: np.ndarray, path: list[str]) -> np.ndarray:
         """Restrict a section along a path of nodes.
 
         Parameters

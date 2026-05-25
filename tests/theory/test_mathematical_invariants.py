@@ -9,16 +9,15 @@ Uses Hypothesis to verify fundamental algebraic and geometric properties:
 
 from __future__ import annotations
 
+import hypothesis.strategies as st
 import networkx as nx
 import numpy as np
 from hypothesis import HealthCheck, given, settings
-import hypothesis.strategies as st
 
 from groupoid.cohomology import compute_h1
 from groupoid.groupoid import Morphism, compose
 from groupoid.manifold import karcher_mean
 from groupoid.sheaf import Sheaf
-
 
 # ---------------------------------------------------------------------------
 # Custom strategies
@@ -32,9 +31,7 @@ def invertible_matrices(draw, dim=None):
         dim = draw(st.integers(min_value=2, max_value=6))
     entries = draw(
         st.lists(
-            st.floats(
-                min_value=-2.0, max_value=2.0, allow_nan=False, allow_infinity=False
-            ),
+            st.floats(min_value=-2.0, max_value=2.0, allow_nan=False, allow_infinity=False),
             min_size=dim * dim,
             max_size=dim * dim,
         )
@@ -66,9 +63,9 @@ def test_karcher_mean_of_identical_points(dim, n_copies):
     mean = karcher_mean(manifold, points)
 
     similarity = np.abs(np.dot(mean.flatten(), point.flatten()))
-    assert similarity > 1.0 - 1e-4, (
-        f"Karcher mean of identical points diverged: similarity={similarity}"
-    )
+    assert (
+        similarity > 1.0 - 1e-4
+    ), f"Karcher mean of identical points diverged: similarity={similarity}"
 
 
 # ---------------------------------------------------------------------------
@@ -151,9 +148,7 @@ def test_restriction_maps_compose(data, dim):
 
     section_entries = data.draw(
         st.lists(
-            st.floats(
-                min_value=-10.0, max_value=10.0, allow_nan=False, allow_infinity=False
-            ),
+            st.floats(min_value=-10.0, max_value=10.0, allow_nan=False, allow_infinity=False),
             min_size=dim,
             max_size=dim,
         )
