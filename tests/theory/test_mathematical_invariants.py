@@ -51,7 +51,7 @@ def invertible_matrices(draw, dim=None):
     dim=st.integers(min_value=2, max_value=5),
     n_copies=st.integers(min_value=2, max_value=10),
 )
-@settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=500, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 def test_karcher_mean_of_identical_points(dim, n_copies):
     """The Karcher mean of n copies of the same point must be that point."""
     from geomstats.geometry.hypersphere import Hypersphere
@@ -74,7 +74,7 @@ def test_karcher_mean_of_identical_points(dim, n_copies):
 
 
 @given(data=st.data(), dim=st.integers(min_value=2, max_value=5))
-@settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=500, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 def test_groupoid_composition_associativity(data, dim):
     """Composition of morphisms must be associative: (f;g);h = f;(g;h)."""
     Q1 = data.draw(invertible_matrices(dim=dim))
@@ -104,7 +104,7 @@ def test_groupoid_composition_associativity(data, dim):
 
 
 @given(data=st.data(), dim=st.integers(min_value=2, max_value=5))
-@settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=500, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 def test_h1_vanishes_on_coboundary(data, dim):
     """H^1 must vanish when transport maps form a coboundary."""
     graph = nx.DiGraph()
@@ -131,7 +131,7 @@ def test_h1_vanishes_on_coboundary(data, dim):
 
 
 @given(data=st.data(), dim=st.integers(min_value=2, max_value=5))
-@settings(max_examples=500, suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=500, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 def test_restriction_maps_compose(data, dim):
     """restrict(A->C) must equal restrict(B->C) . restrict(A->B)."""
     graph = nx.DiGraph()

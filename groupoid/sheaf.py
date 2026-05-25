@@ -53,7 +53,8 @@ class Sheaf:
             The restricted section at the target node.
         """
         R = self._restriction_maps[(source, target)]
-        return R @ section
+        result: np.ndarray = R @ section
+        return result
 
     def restrict_along_path(self, section: np.ndarray, path: list[str]) -> np.ndarray:
         """Restrict a section along a path of nodes.

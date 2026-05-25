@@ -61,7 +61,7 @@ def compute_h1(
                 holonomy = T @ holonomy
 
         if holonomy is not None and dim is not None:
-            deviation = np.linalg.norm(holonomy - np.eye(dim), ord="fro")
+            deviation = float(np.linalg.norm(holonomy - np.eye(dim), ord="fro"))
             max_holonomy_norm = max(max_holonomy_norm, deviation)
 
     logger.debug("H^1 norm = {:.6e}", max_holonomy_norm)

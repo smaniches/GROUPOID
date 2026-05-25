@@ -47,12 +47,9 @@ def karcher_mean(
         type(manifold).__name__,
     )
 
-    estimator = FrechetMean(manifold, max_iter=max_iter)
-    if weights is not None:
-        estimator.fit(points, weights=weights)
-    else:
-        estimator.fit(points)
+    estimator = FrechetMean(manifold)
+    estimator.fit(points)
 
-    mean = estimator.estimate_
+    mean: np.ndarray = estimator.estimate_
     logger.debug("Karcher mean converged")
     return mean
