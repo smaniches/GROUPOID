@@ -114,4 +114,4 @@ markers = [
 asyncio_mode = "auto"
 
 [tool.bandit]
-exclude_dirs = ["tests", "benchmarks"]
+exclude_dirs = ["tests", "benchmarks", "experiments"]

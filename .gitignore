@@ -16,3 +16,5 @@ site/
 .env
 *.log
 benchmark_results.json
+data/
+experiments/smoke_test.json
