@@ -1,0 +1,117 @@
+[build-system]
+requires = ["setuptools>=68.0", "setuptools-scm>=8.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "groupoid"
+version = "0.1.0"
+description = "Groupoid-based federated learning framework using Riemannian geometry"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [
+    {name = "Santiago Maniches", email = "santiago.maniches@gmail.com"},
+]
+keywords = [
+    "federated-learning",
+    "riemannian-geometry",
+    "groupoid",
+    "topology",
+    "differential-privacy",
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "geomstats>=0.7",
+    "pymanopt>=2.0",
+    "ripser>=0.6",
+    "persim>=0.3",
+    "POT>=0.9",
+    "networkx>=3.0",
+    "einops>=0.7",
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "torch>=2.0",
+    "pydantic>=2.0",
+    "loguru>=0.7",
+]
+
+[project.optional-dependencies]
+privacy = [
+    "opacus>=1.4",
+    "tenseal>=0.3",
+]
+numerical = [
+    "numba>=0.58",
+    "jax>=0.4",
+    "jaxlib>=0.4",
+]
+experiment = [
+    "wandb>=0.16",
+]
+dev = [
+    "pytest>=7.0",
+    "hypothesis>=6.0",
+    "pytest-benchmark>=4.0",
+    "pytest-xdist>=3.0",
+    "pytest-asyncio>=0.23",
+    "pre-commit>=3.0",
+    "bandit>=1.7",
+    "safety>=3.0",
+    "ruff>=0.1",
+    "black>=23.0",
+    "mypy>=1.0",
+]
+docs = [
+    "mkdocs>=1.5",
+    "mkdocs-material>=9.0",
+    "mkdocstrings[python]>=0.24",
+]
+all = [
+    "groupoid[privacy,numerical,experiment,dev,docs]",
+]
+
+[project.urls]
+Homepage = "https://github.com/smaniches/GROUPOID"
+Repository = "https://github.com/smaniches/GROUPOID"
+Issues = "https://github.com/smaniches/GROUPOID/issues"
+
+[tool.setuptools.packages.find]
+include = ["groupoid*"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 99
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "SIM", "TCH"]
+
+[tool.black]
+target-version = ["py310"]
+line-length = 99
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow",
+    "benchmark: marks benchmark tests",
+]
+asyncio_mode = "auto"
+
+[tool.bandit]
+exclude_dirs = ["tests"]

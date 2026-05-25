@@ -1,0 +1,44 @@
+site_name: GROUPOID
+site_description: Groupoid-based federated learning with Riemannian geometry
+site_author: Santiago Maniches
+site_url: https://smaniches.github.io/GROUPOID
+
+repo_name: smaniches/GROUPOID
+repo_url: https://github.com/smaniches/GROUPOID
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: amber
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - content.code.copy
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+            show_root_heading: true
+
+nav:
+  - Home: index.md
+  - Theory: theory.md
+  - Quickstart: quickstart.md
+
+markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - admonition
+  - toc:
+      permalink: true
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
