@@ -2,4 +2,24 @@
 
 __version__ = "0.1.0"
 
-__all__ = ["__version__"]
+from groupoid.aggregation import FederatedRound, TransportGroupoidAggregator
+from groupoid.cohomology import compute_h1
+from groupoid.groupoid import CompositionError, Morphism, compose, inverse
+from groupoid.laplacian import SpectralSummary, spectral_analysis
+from groupoid.manifold import karcher_mean
+from groupoid.sheaf import Sheaf
+
+__all__ = [
+    "__version__",
+    "CompositionError",
+    "FederatedRound",
+    "Morphism",
+    "Sheaf",
+    "SpectralSummary",
+    "TransportGroupoidAggregator",
+    "compose",
+    "compute_h1",
+    "inverse",
+    "karcher_mean",
+    "spectral_analysis",
+]
