@@ -6,6 +6,8 @@ site_url: https://smaniches.github.io/GROUPOID
 repo_name: smaniches/GROUPOID
 repo_url: https://github.com/smaniches/GROUPOID
 
+use_directory_urls: false
+
 theme:
   name: material
   palette:
@@ -16,6 +18,7 @@ theme:
     - navigation.tabs
     - navigation.sections
     - content.code.copy
+  custom_dir: docs/overrides
 
 plugins:
   - search
@@ -30,6 +33,7 @@ nav:
   - Home: index.md
   - Theory: theory.md
   - Quickstart: quickstart.md
+  - API Reference: api.md
 
 markdown_extensions:
   - pymdownx.arithmatex:
