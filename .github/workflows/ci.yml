@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff black mypy
+      - name: Run ruff
+        run: ruff check .
+      - name: Run black check
+        run: black --check .
+      - name: Run mypy
+        run: mypy groupoid/ --ignore-missing-imports
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[dev]"
+      - name: Run tests
+        run: pytest tests/ -v --tb=short -x
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit safety
+      - name: Run bandit
+        run: bandit -r groupoid/ -c pyproject.toml
+      - name: Run safety
+        run: safety check
+        continue-on-error: true
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pre-commit
+        run: pip install pre-commit
+      - name: Run pre-commit
+        run: pre-commit run --all-files
+
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[dev]"
+      - name: Run benchmarks
+        run: |
+          pytest benchmarks/ -v --benchmark-json=benchmark_results.json || true
+      - name: Check for regression
+        run: |
+          python -c "
+          import json, sys
+          with open('benchmark_results.json') as f:
+              results = json.load(f)
+          with open('benchmarks/baseline.json') as f:
+              baseline = json.load(f)
+          for bench in results.get('benchmarks', []):
+              name = bench['name']
+              current_mean = bench['stats']['mean']
+              for base_bench in baseline.get('benchmarks', []):
+                  if base_bench['name'] == name:
+                      base_mean = base_bench['stats']['mean']
+                      ratio = current_mean / base_mean
+                      if ratio > 1.20:
+                          print(f'REGRESSION: {name} is {ratio:.2f}x slower')
+                          sys.exit(1)
+                      else:
+                          print(f'OK: {name} is {ratio:.2f}x baseline')
+          "
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[docs]"
+      - name: Build docs
+        run: mkdocs build --strict
