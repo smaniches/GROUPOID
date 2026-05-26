@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "groupoid"
-version = "0.1.0"
-description = "Groupoid-based federated learning framework using Riemannian geometry"
+version = "0.1.0.dev0"
+description = "Research prototype: groupoid-based aggregation for federated learning on Riemannian manifolds"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.10"
@@ -17,7 +17,6 @@ keywords = [
     "riemannian-geometry",
     "groupoid",
     "topology",
-    "differential-privacy",
 ]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
@@ -45,6 +44,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Planned, not yet integrated into any code path
 privacy = [
     "opacus>=1.4",
     "tenseal>=0.3",

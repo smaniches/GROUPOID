@@ -1,68 +1,75 @@
 # GROUPOID
 
-**Groupoid-based federated learning with Riemannian geometry.**
+> **Pre-alpha research prototype.** Not production software.
+> See [STATUS](https://github.com/smaniches/GROUPOID/blob/main/STATUS.md)
+> and [LIMITATIONS](https://github.com/smaniches/GROUPOID/blob/main/LIMITATIONS.md).
 
-GROUPOID is a framework for federated learning that uses the mathematical
-structure of groupoids, sheaves, and Riemannian geometry to aggregate
-models across heterogeneous clients while preserving geometric invariants
-and detecting inconsistencies via cohomological methods.
+**Groupoid-based aggregation for federated learning on Riemannian manifolds.**
 
-## Key Features
+GROUPOID explores using the mathematical structure of transport groupoids,
+cellular sheaves, and Riemannian geometry to aggregate model parameters
+across heterogeneous federated clients. The central hypothesis is that
+geometry-aware aggregation (Karcher mean with parallel transport) can
+outperform naive Euclidean averaging when client parameter spaces are
+heterogeneous, and that cohomological invariants (H^1) can diagnose
+irreconcilable model divergence before it degrades performance.
 
-- **Riemannian Aggregation**: Compute Karcher (Frechet) means on manifolds
-  instead of naive Euclidean averaging, respecting the geometry of parameter
-  spaces.
-- **Cohomological Obstruction Detection**: Use first cohomology H^1 of
-  transport groupoids to detect when local models cannot be consistently
-  aggregated.
-- **Sheaf-Theoretic Consistency**: Model data flow between clients as
-  sections of a cellular sheaf, with restriction maps enforcing local-to-global
-  compatibility.
-- **Sheaf Laplacian Spectral Analysis**: Analyze the algebraic connectivity
-  of the federation and drive consensus via sheaf diffusion.
-- **Parallel Transport**: Schild's ladder and pole ladder implementations
-  for transporting gradients between client tangent spaces.
-- **Riemannian Optimizers**: Manifold-aware SGD and Adam with curvature-adaptive
-  learning rates.
-- **Persistent Homology**: Track federation divergence across rounds using
-  topological data analysis.
-- **Differential Privacy**: Optional integration with Opacus and TenSEAL for
-  differentially private and homomorphically encrypted federated learning.
+## Implemented and tested
+
+| Module | Description | Test coverage |
+|---|---|---|
+| `groupoid.manifold` | Karcher mean via geomstats FrechetMean | Hypothesis (500 examples) |
+| `groupoid.groupoid` | Morphism composition, inverse | Hypothesis (500 examples) |
+| `groupoid.cohomology` | H^1 via cycle-basis holonomy | Hypothesis (500 examples) |
+| `groupoid.sheaf` | Cellular sheaf, restriction maps | Hypothesis (500 examples) |
+| `groupoid.laplacian` | Sheaf Laplacian, spectral analysis, diffusion | Integration tests |
+| `groupoid.aggregation` | Transport-aware federated aggregation pipeline | Integration tests |
+
+## Implemented, not yet tested
+
+| Module | Description | Status |
+|---|---|---|
+| `groupoid.transport` | Schild's ladder, pole ladder parallel transport | Untested |
+| `groupoid.optimizer` | Riemannian SGD, Adam, curvature-adaptive LR | Untested |
+| `groupoid.persistence` | Vietoris-Rips persistent homology | Untested |
+
+## Not yet implemented
+
+- Differential privacy (Opacus, TenSEAL integration)
+- Federated training loop with real neural networks
+- Communication protocol for distributed deployment
+- Convergence guarantees or formal proofs
 
 ## Architecture
 
 ```
-Client A ──T_AB──► Client B
-  │                   │
-  T_AC              T_BD
-  │                   │
-  ▼                   ▼
-Client C ──T_CD──► Client D
-        ╲         ╱
-         ╲       ╱
-      Karcher Mean
-     (on manifold)
-         ╱       ╲
-        ╱         ╲
-   global model → local updates
+Client A ---T_AB---> Client B
+  |                    |
+  T_AC               T_BD
+  |                    |
+  v                    v
+Client C ---T_CD---> Client D
+        \          /
+         \        /
+       Karcher Mean
+      (on manifold)
+         /        \
+        /          \
+   global model -> local updates
    (via inverse transport)
 ```
 
 ## Installation
 
-Install the core package:
+From source (not published on PyPI):
 
 ```bash
-pip install groupoid
+git clone https://github.com/smaniches/GROUPOID.git
+cd GROUPOID
+pip install -e ".[dev]"
 ```
 
-For development (includes testing, linting, and benchmarking tools):
-
-```bash
-pip install -e ".[all]"
-```
-
-## Quick Example
+## Quick example
 
 ```python
 import networkx as nx
@@ -74,46 +81,28 @@ manifold = Hypersphere(dim=2)
 graph = nx.DiGraph([("A", "B"), ("A", "C")])
 
 aggregator = TransportGroupoidAggregator(
-    manifold=manifold,
-    graph=graph,
-    base_node="A",
+    manifold=manifold, graph=graph, base_node="A"
 )
 
-# Register rotation matrices as transport maps
 theta = np.pi / 6
-R = np.array([[np.cos(theta), -np.sin(theta), 0],
-              [np.sin(theta),  np.cos(theta), 0],
-              [0, 0, 1]])
+R = np.array([
+    [np.cos(theta), -np.sin(theta), 0],
+    [np.sin(theta),  np.cos(theta), 0],
+    [0, 0, 1],
+])
 aggregator.register_transport("A", "B", R)
 aggregator.register_transport("A", "C", R.T)
 
-# Each client has parameters on S^2
 client_params = {
     "A": np.array([0.0, 0.0, 1.0]),
     "B": np.array([0.1, 0.0, 0.995]),
     "C": np.array([-0.1, 0.0, 0.995]),
 }
-# Normalize to manifold
 client_params = {k: v / np.linalg.norm(v) for k, v in client_params.items()}
 
 result = aggregator.aggregate(client_params)
 print(f"H^1 = {result.h1_norm:.2e} (consistent: {result.is_consistent})")
-print(f"Global model: {result.global_params}")
 ```
-
-## Modules
-
-| Module | Description |
-|---|---|
-| `groupoid.manifold` | Karcher mean computation via geomstats |
-| `groupoid.groupoid` | Morphism composition, inverse, transport groupoid |
-| `groupoid.cohomology` | First cohomology H^1 for obstruction detection |
-| `groupoid.sheaf` | Cellular sheaf with restriction maps |
-| `groupoid.aggregation` | Full federated aggregation pipeline |
-| `groupoid.laplacian` | Sheaf Laplacian, spectral analysis, diffusion |
-| `groupoid.transport` | Parallel transport (Schild's ladder, pole ladder) |
-| `groupoid.optimizer` | Riemannian SGD, Adam, curvature-adaptive LR |
-| `groupoid.persistence` | Persistent homology for divergence tracking |
 
 ## License
 

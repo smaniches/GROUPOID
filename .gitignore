@@ -10,9 +10,11 @@ build/
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
+.hypothesis/
 htmlcov/
 .coverage
 site/
 .env
 *.log
 benchmark_results.json
+data/

@@ -50,16 +50,8 @@ def schild_ladder(
         The transported tangent vector at end_point.
     """
     metric = manifold.metric
-
-    if n_rungs == 1:
-        # Single rung: midpoint construction
-        mid = metric.exp(tangent_vec / 2.0, base_point)
-        log_end_to_mid = metric.log(mid, end_point)
-        transported: np.ndarray = 2.0 * log_end_to_mid
-        return transported
-
-    # Multi-rung: subdivide the geodesic
     direction = metric.log(end_point, base_point)
+
     current_base = base_point
     current_vec = tangent_vec
 
@@ -67,12 +59,19 @@ def schild_ladder(
         step = direction * (1.0 / n_rungs)
         next_base = metric.exp(step, current_base)
 
-        mid = metric.exp(current_vec / 2.0, current_base)
-        log_next_to_mid = metric.log(mid, next_base)
-        current_vec = 2.0 * log_next_to_mid
-        current_base = next_base
+        # Schild's ladder: reflect the antipodal endpoint through
+        # the midpoint of the base-to-next geodesic
+        u = metric.exp(-current_vec, current_base)
+        midpoint = metric.exp(step / 2.0, current_base)
+        log_mid_u = metric.log(u, midpoint)
+        u_prime = metric.exp(-log_mid_u, midpoint)
+        current_vec = metric.log(u_prime, next_base)
 
-    return current_vec
+        current_base = next_base
+        direction = metric.log(end_point, current_base)
+
+    result: np.ndarray = current_vec
+    return result
 
 
 def pole_ladder(
