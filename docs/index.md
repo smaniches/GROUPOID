@@ -1,7 +1,8 @@
 # GROUPOID
 
 > **Pre-alpha research prototype.** Not production software.
-> See [STATUS.md](../STATUS.md) and [LIMITATIONS.md](../LIMITATIONS.md).
+> See [STATUS](https://github.com/smaniches/GROUPOID/blob/main/STATUS.md)
+> and [LIMITATIONS](https://github.com/smaniches/GROUPOID/blob/main/LIMITATIONS.md).
 
 **Groupoid-based aggregation for federated learning on Riemannian manifolds.**
 
