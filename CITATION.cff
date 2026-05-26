@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "GROUPOID: Groupoid-based aggregation for federated learning on Riemannian manifolds"
+version: 0.1.0-dev
+date-released: 2024-01-01
+license: Apache-2.0
+repository-code: "https://github.com/smaniches/GROUPOID"
+authors:
+  - family-names: Maniches
+    given-names: Santiago
+    email: santiago.maniches@gmail.com
+    affiliation: TOPOLOGICA LLC
+keywords:
+  - federated learning
+  - Riemannian geometry
+  - groupoid
+  - sheaf theory
+  - cohomology
+  - topological data analysis
+abstract: >-
+  Research prototype exploring groupoid-based aggregation for federated
+  learning on Riemannian manifolds. Implements transport groupoid
+  morphisms, first cohomology (H^1) for consistency detection,
+  cellular sheaf Laplacian for spectral analysis, and Karcher mean
+  aggregation via geomstats.
