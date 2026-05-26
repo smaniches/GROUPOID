@@ -28,10 +28,9 @@ system. The following limitations apply.
   correct for 1-dimensional nerve complexes but does not generalize
   to higher-dimensional simplicial complexes without modification.
 - Sheaf Laplacian construction assumes uniform stalk dimension.
-- Schild's ladder implementation has a known norm-preservation bug
-  (tracked by xfail test). Pole ladder works correctly.
-- Parallel transport approximations are first-order accurate per rung.
-  Accuracy depends on step count and geodesic distance.
+- Parallel transport approximations (Schild's ladder, pole ladder)
+  are first-order accurate per rung. Accuracy depends on step count
+  and geodesic distance.
 - No formal convergence rate analysis exists for the groupoid
   aggregation method.
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 
 class TestKarcherMeanSmoke:
@@ -25,7 +24,6 @@ class TestKarcherMeanSmoke:
 class TestTransportSmoke:
     """Basic parallel transport sanity checks."""
 
-    @pytest.mark.xfail(reason="Schild's ladder norm preservation needs debugging")
     def test_schild_ladder_preserves_norm(self):
         from geomstats.geometry.hypersphere import Hypersphere
 
@@ -39,10 +37,10 @@ class TestTransportSmoke:
         tangent = manifold.to_tangent(np.array([1.0, 0.0, 0.0]), base)
         original_norm = np.linalg.norm(tangent)
 
-        transported = schild_ladder(manifold, tangent, base, end, n_rungs=1)
+        transported = schild_ladder(manifold, tangent, base, end, n_rungs=4)
         transported_norm = np.linalg.norm(transported)
 
-        assert abs(original_norm - transported_norm) / (original_norm + 1e-10) < 0.3
+        assert abs(original_norm - transported_norm) / (original_norm + 1e-10) < 1e-4
 
     def test_pole_ladder_preserves_norm(self):
         from geomstats.geometry.hypersphere import Hypersphere
@@ -60,7 +58,7 @@ class TestTransportSmoke:
         transported = pole_ladder(manifold, tangent, base, end, n_rungs=4)
         transported_norm = np.linalg.norm(transported)
 
-        assert abs(original_norm - transported_norm) / (original_norm + 1e-10) < 0.3
+        assert abs(original_norm - transported_norm) / (original_norm + 1e-10) < 1e-4
 
 
 class TestOptimizerSmoke:
@@ -73,13 +71,13 @@ class TestOptimizerSmoke:
 
         manifold = Hypersphere(dim=2)
         point = np.array([0.0, 0.0, 1.0])
-        grad = np.array([0.1, 0.2, 0.0])
+        grad = np.array([0.1, 0.2, 0.3])
 
         opt = RiemannianSGD(manifold=manifold, lr=0.01)
         new_point = opt.step(point, grad)
 
         assert new_point.shape == (3,)
-        assert abs(np.linalg.norm(new_point) - 1.0) < 1e-4
+        assert manifold.belongs(new_point, atol=1e-4)
 
     def test_riemannian_adam_stays_on_manifold(self):
         from geomstats.geometry.hypersphere import Hypersphere
@@ -88,13 +86,13 @@ class TestOptimizerSmoke:
 
         manifold = Hypersphere(dim=2)
         point = np.array([0.0, 0.0, 1.0])
-        grad = np.array([0.1, 0.2, 0.0])
+        grad = np.array([0.1, 0.2, 0.3])
 
         opt = RiemannianAdam(manifold=manifold, lr=0.01)
         new_point = opt.step(point, grad)
 
         assert new_point.shape == (3,)
-        assert abs(np.linalg.norm(new_point) - 1.0) < 1e-4
+        assert manifold.belongs(new_point, atol=1e-4)
 
 
 class TestAggregationSmoke:
