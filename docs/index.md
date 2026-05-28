@@ -106,4 +106,4 @@ print(f"H^1 = {result.h1_norm:.2e} (consistent: {result.is_consistent})")
 
 ## License
 
-Copyright 2024 TOPOLOGICA LLC. Licensed under the Apache License, Version 2.0.
+Copyright 2026 TOPOLOGICA LLC. Licensed under the Apache License, Version 2.0.
