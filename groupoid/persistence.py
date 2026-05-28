@@ -53,7 +53,6 @@ def compute_persistence(
     PersistenceSummary
         Topological summary including Betti numbers and persistence.
     """
-    from persim import plot_diagrams  # noqa: F401
     from ripser import ripser
 
     logger.debug("Computing persistence: {} points, max_dim={}", points.shape[0], max_dim)

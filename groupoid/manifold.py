@@ -48,7 +48,21 @@ def karcher_mean(
     )
 
     estimator = FrechetMean(manifold)
-    estimator.fit(points)
+
+    # Forward convergence controls to the underlying gradient-descent
+    # optimizer when the installed geomstats version exposes it. Older
+    # versions without an `optimizer` attribute fall back to their defaults.
+    optimizer = getattr(estimator, "optimizer", None)
+    if optimizer is not None:
+        if hasattr(optimizer, "max_iter"):
+            optimizer.max_iter = max_iter
+        if hasattr(optimizer, "epsilon"):
+            optimizer.epsilon = tol
+
+    if weights is not None:
+        estimator.fit(points, weights=weights)
+    else:
+        estimator.fit(points)
 
     mean: np.ndarray = estimator.estimate_
     logger.debug("Karcher mean converged")
