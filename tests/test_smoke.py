@@ -20,6 +20,27 @@ class TestKarcherMeanSmoke:
         assert mean.shape == (3,)
         assert manifold.belongs(mean, atol=1e-4)
 
+    def test_weights_influence_mean(self):
+        """Weights must be honored: a dominant weight pulls the mean toward
+        its point. Guards against weights being silently dropped."""
+        from geomstats.geometry.hypersphere import Hypersphere
+
+        from groupoid.manifold import karcher_mean
+
+        manifold = Hypersphere(dim=2)
+        points = manifold.random_point(n_samples=4)
+
+        unweighted = karcher_mean(manifold, points)
+        weights = np.array([10.0, 1.0, 1.0, 1.0])
+        weights = weights / weights.sum()
+        weighted = karcher_mean(manifold, points, weights=weights)
+
+        assert manifold.belongs(weighted, atol=1e-4)
+        # The weighted mean must differ from the unweighted one and sit
+        # closer to the dominant point.
+        assert not np.allclose(unweighted, weighted, atol=1e-3)
+        assert np.dot(weighted, points[0]) > np.dot(unweighted, points[0])
+
 
 class TestTransportSmoke:
     """Basic parallel transport sanity checks."""

@@ -11,11 +11,9 @@ pip install -e ".[all]"
 pre-commit install
 ```
 
-### Core only
+!!! note
 
-```bash
-pip install groupoid
-```
+    GROUPOID is not published on PyPI. Install from source as shown above.
 
 ## Basic Usage
 
