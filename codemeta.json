@@ -5,8 +5,7 @@
   "description": "Pre-alpha research prototype exploring groupoid-based aggregation for federated learning on Riemannian manifolds.",
   "codeRepository": "https://github.com/smaniches/GROUPOID",
   "programmingLanguage": "Python",
-  "license": "https://spdx.org/licenses/Apache-2.0",
-  "developmentStatus": "concept",
+  "license": "Apache-2.0",
   "version": "0.1.0.dev0",
   "author": [
     {
