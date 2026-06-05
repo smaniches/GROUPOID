@@ -1,0 +1,29 @@
+{
+  "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+  "@type": "SoftwareSourceCode",
+  "name": "GROUPOID",
+  "description": "Pre-alpha research prototype exploring groupoid-based aggregation for federated learning on Riemannian manifolds.",
+  "codeRepository": "https://github.com/smaniches/GROUPOID",
+  "programmingLanguage": "Python",
+  "license": "https://spdx.org/licenses/Apache-2.0",
+  "developmentStatus": "concept",
+  "version": "0.1.0.dev0",
+  "author": [
+    {
+      "@type": "Person",
+      "@id": "https://orcid.org/0009-0005-6480-1987",
+      "givenName": "Santiago",
+      "familyName": "Maniches",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "TOPOLOGICA LLC"
+      }
+    }
+  ],
+  "keywords": [
+    "federated-learning",
+    "riemannian-geometry",
+    "groupoid",
+    "topology"
+  ]
+}

@@ -3,7 +3,7 @@ message: "If you use this software, please cite it as below."
 type: software
 title: "GROUPOID: Groupoid-based aggregation for federated learning on Riemannian manifolds"
 version: 0.1.0.dev0
-date-released: 2024-01-01
+date-released: 2026-05-25
 license: Apache-2.0
 repository-code: "https://github.com/smaniches/GROUPOID"
 authors:
@@ -11,6 +11,7 @@ authors:
     given-names: Santiago
     email: santiago.maniches@gmail.com
     affiliation: TOPOLOGICA LLC
+    orcid: "https://orcid.org/0009-0005-6480-1987"
 keywords:
   - federated learning
   - Riemannian geometry
