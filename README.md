@@ -39,14 +39,21 @@ integration tests:
   H^1 consistency checking, multi-round convergence tested
   (`groupoid.aggregation`)
 
+## Implemented, smoke-tested, not yet integrated
+
+These modules have implementations with smoke-test coverage but are not
+yet wired into the main aggregation pipeline:
+
+- **Parallel transport**: Schild's ladder and pole ladder; smoke-tested
+  for tangent-vector norm preservation on S^2 (`groupoid.transport`)
+- **Riemannian optimizers**: SGD and Adam with exponential map
+  retraction; smoke-tested to stay on the manifold after a step
+  (`groupoid.optimizer`)
+
 ## Implemented, not yet tested
 
-These modules have implementations but lack test coverage:
+This module has an implementation but lacks test coverage:
 
-- **Parallel transport**: Schild's ladder and pole ladder
-  (`groupoid.transport`)
-- **Riemannian optimizers**: SGD and Adam with exponential map retraction
-  (`groupoid.optimizer`)
 - **Persistent homology**: Vietoris-Rips filtration for divergence
   tracking (`groupoid.persistence`)
 
