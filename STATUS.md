@@ -31,7 +31,7 @@
 | Sheaf Laplacian | Tested | Unit: delta^T-delta equality, PSD, kernel content on non-orthogonal maps; Integration: spectral analysis, diffusion convergence |
 | Aggregation pipeline | Tested | Integration: multi-round convergence on S^2, consistency check |
 | Parallel transport | Smoke-tested | Smoke: Schild's ladder and pole ladder preserve tangent-vector norm on S^2 |
-| Riemannian optimizers | Smoke-tested | Smoke: SGD and Adam steps stay on S^2 (belongs after step) |
+| Riemannian optimizers | Smoke-tested | Smoke: SGD and Adam steps stay on S^2 |
 | Persistent homology | Implemented | Not tested |
 | Differential privacy | Not implemented | Listed as dependency only |
 | Real FL training | Not implemented | |
