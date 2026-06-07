@@ -31,8 +31,10 @@ integration tests:
   cycle basis; coboundary vanishing tested (`groupoid.cohomology`)
 - **Cellular sheaf**: restriction maps with functoriality tested
   (`groupoid.sheaf`)
-- **Sheaf Laplacian**: spectral analysis, algebraic connectivity,
-  diffusion convergence tested (`groupoid.laplacian`)
+- **Sheaf Laplacian**: connection Laplacian L = delta^T delta; PSD and
+  delta^T-delta equality verified on non-orthogonal restriction maps, plus
+  spectral analysis, algebraic connectivity, and diffusion convergence
+  tested (`groupoid.laplacian`)
 - **Federated aggregation pipeline**: transport-aware aggregation with
   H^1 consistency checking, multi-round convergence tested
   (`groupoid.aggregation`)

@@ -43,10 +43,19 @@ def build_sheaf_laplacian(sheaf: Sheaf, stalk_dim: int) -> np.ndarray:
 
         L_F = delta^T @ delta
 
-    where delta is the coboundary map. Equivalently:
+    where delta is the connection coboundary. For each edge (u, v) with
+    restriction (transport) map R = R_{uv}: stalk(u) -> stalk(v), the
+    coboundary acts as (delta x)_{(u,v)} = x_v - R_{uv} x_u, so
+    L = delta^T @ delta has blocks (summed over incident edges):
 
-        L_F[i,i] = sum_j R_{ij}^T @ R_{ij}     (diagonal blocks)
-        L_F[i,j] = -R_{ij}^T @ R_{ij}           (off-diagonal, if (i,j) in E)
+        L[u,u] += R_{uv}^T @ R_{uv}    (source diagonal)
+        L[v,v] += I                    (target diagonal)
+        L[u,v] += -R_{uv}^T            (off-diagonal)
+        L[v,u] += -R_{uv}              (off-diagonal)
+
+    L is symmetric positive semi-definite for ANY restriction maps (it is
+    delta^T delta); its kernel is the space of transport-consistent global
+    sections (x_v = R_{uv} x_u on every edge).
 
     Parameters
     ----------
@@ -70,18 +79,14 @@ def build_sheaf_laplacian(sheaf: Sheaf, stalk_dim: int) -> np.ndarray:
     for u, v in sheaf.graph.edges():
         i, j = node_idx[u], node_idx[v]
         R = sheaf.get_restriction_map(u, v)
-
-        # Off-diagonal block: -R^T @ R
-        block = R.T @ R
         i_slice = slice(i * stalk_dim, (i + 1) * stalk_dim)
         j_slice = slice(j * stalk_dim, (j + 1) * stalk_dim)
 
-        L[i_slice, j_slice] -= block
-        L[j_slice, i_slice] -= block.T
-
-        # Diagonal contributions
-        L[i_slice, i_slice] += block
-        L[j_slice, j_slice] += R @ R.T
+        # L = delta^T delta for coboundary (delta x)_(u,v) = x_v - R_uv x_u:
+        L[i_slice, i_slice] += R.T @ R  # source diagonal: R^T R
+        L[j_slice, j_slice] += np.eye(stalk_dim)  # target diagonal: I
+        L[i_slice, j_slice] += -R.T  # off-diagonal: -R^T
+        L[j_slice, i_slice] += -R  # off-diagonal: -R
 
     logger.debug("Built sheaf Laplacian: {}x{} ({} nodes, stalk_dim={})", N, N, n, stalk_dim)
     return L
@@ -133,7 +138,7 @@ def spectral_analysis(
     consensus_rate = algebraic_connectivity
 
     logger.info(
-        "Spectral analysis: kernel_dim={}, spectral_gap={:.4f}, " "connectivity={:.4f}",
+        "Spectral analysis: kernel_dim={}, spectral_gap={:.4f}, connectivity={:.4f}",
         kernel_dim,
         spectral_gap,
         algebraic_connectivity,
