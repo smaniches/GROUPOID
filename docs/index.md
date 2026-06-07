@@ -22,7 +22,7 @@ irreconcilable model divergence before it degrades performance.
 | `groupoid.groupoid` | Morphism composition, inverse | Hypothesis (500 examples) |
 | `groupoid.cohomology` | H^1 via cycle-basis holonomy | Hypothesis (500 examples) |
 | `groupoid.sheaf` | Cellular sheaf, restriction maps | Hypothesis (500 examples) |
-| `groupoid.laplacian` | Sheaf Laplacian, spectral analysis, diffusion | Integration tests |
+| `groupoid.laplacian` | Sheaf Laplacian, spectral analysis, diffusion | Unit: PSD + delta^T-delta equality on non-orthogonal maps, transport-consistent kernel; Integration: spectral analysis, diffusion |
 | `groupoid.aggregation` | Transport-aware federated aggregation pipeline | Integration tests |
 
 ## Implemented, not yet tested
