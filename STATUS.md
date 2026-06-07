@@ -25,7 +25,7 @@
 | Morphism composition | Tested | Hypothesis: associativity verified (500 examples) |
 | H^1 cohomology | Tested | Hypothesis: vanishes on coboundaries (500 examples) |
 | Sheaf restriction maps | Tested | Hypothesis: functoriality verified (500 examples) |
-| Sheaf Laplacian | Tested | Integration: spectral analysis, diffusion convergence |
+| Sheaf Laplacian | Tested | Unit: delta^T-delta equality, PSD, kernel content on non-orthogonal maps; Integration: spectral analysis, diffusion convergence |
 | Aggregation pipeline | Tested | Integration: multi-round convergence on S^2, consistency check |
 | Parallel transport | Implemented | Not tested |
 | Riemannian optimizers | Implemented | Not tested |
