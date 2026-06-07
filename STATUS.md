@@ -10,8 +10,11 @@
 - The aggregation pipeline connects these primitives into a working
   federated round on synthetic data (tested on S^2 with rotation
   transport maps).
-- Three modules (transport, optimizer, persistence) have implementations
-  but lack test coverage and are not integrated into the main pipeline.
+- The transport and optimizer modules have smoke-test coverage
+  (parallel transport preserves tangent-vector norm; Riemannian SGD/Adam
+  steps stay on the manifold) but are not yet integrated into the main
+  pipeline. The persistence module is implemented but untested and
+  likewise not integrated.
 - No federated training loop with real neural networks exists yet.
 - No differential privacy mechanism is implemented.
 - No formal convergence analysis or proofs exist.
@@ -27,8 +30,8 @@
 | Sheaf restriction maps | Tested | Hypothesis: functoriality verified (500 examples) |
 | Sheaf Laplacian | Tested | Unit: delta^T-delta equality, PSD, kernel content on non-orthogonal maps; Integration: spectral analysis, diffusion convergence |
 | Aggregation pipeline | Tested | Integration: multi-round convergence on S^2, consistency check |
-| Parallel transport | Implemented | Not tested |
-| Riemannian optimizers | Implemented | Not tested |
+| Parallel transport | Smoke-tested | Smoke: Schild's ladder and pole ladder preserve tangent-vector norm on S^2 |
+| Riemannian optimizers | Smoke-tested | Smoke: SGD and Adam steps stay on S^2 |
 | Persistent homology | Implemented | Not tested |
 | Differential privacy | Not implemented | Listed as dependency only |
 | Real FL training | Not implemented | |

@@ -43,8 +43,10 @@ system. The following limitations apply.
 
 ## Test coverage
 
-- 6 of 9 modules have test coverage.
-- Transport, optimizer, and persistence modules are untested.
+- 8 of 9 modules have test coverage.
+- The transport and optimizer modules have smoke-test coverage
+  (norm-preserving transport; optimizer steps stay on the manifold).
+- The persistence module is untested.
 - No end-to-end test with real neural network training exists.
 - Property-based tests use 500 examples per property, which provides
   reasonable but not exhaustive coverage of edge cases.

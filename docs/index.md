@@ -25,12 +25,17 @@ irreconcilable model divergence before it degrades performance.
 | `groupoid.laplacian` | Sheaf Laplacian, spectral analysis, diffusion | Unit: PSD + delta^T-delta equality on non-orthogonal maps, transport-consistent kernel; Integration: spectral analysis, diffusion |
 | `groupoid.aggregation` | Transport-aware federated aggregation pipeline | Integration tests |
 
+## Implemented, smoke-tested, not yet integrated
+
+| Module | Description | Test coverage |
+|---|---|---|
+| `groupoid.transport` | Schild's ladder, pole ladder parallel transport | Smoke: norm preservation on S^2 |
+| `groupoid.optimizer` | Riemannian SGD, Adam, curvature-adaptive LR | Smoke: step stays on S^2 |
+
 ## Implemented, not yet tested
 
 | Module | Description | Status |
 |---|---|---|
-| `groupoid.transport` | Schild's ladder, pole ladder parallel transport | Untested |
-| `groupoid.optimizer` | Riemannian SGD, Adam, curvature-adaptive LR | Untested |
 | `groupoid.persistence` | Vietoris-Rips persistent homology | Untested |
 
 ## Not yet implemented
