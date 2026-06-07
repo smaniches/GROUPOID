@@ -20,7 +20,7 @@ EDGES = [("A", "B"), ("A", "C"), ("B", "D"), ("C", "D")]
 
 
 def _graph() -> nx.DiGraph:
-    g = nx.DiGraph()
+    g: nx.DiGraph = nx.DiGraph()
     g.add_edges_from(EDGES)
     return g
 
@@ -36,13 +36,15 @@ def _independent_delta_t_delta(r: dict, nodes: list) -> np.ndarray:
         re = slice(e * D, (e + 1) * D)
         delta[re, idx[u] * D : (idx[u] + 1) * D] = -r[(u, v)]
         delta[re, idx[v] * D : (idx[v] + 1) * D] = np.eye(D)
-    return delta.T @ delta
+    result: np.ndarray = delta.T @ delta
+    return result
 
 
 def _rotation(axis: np.ndarray, angle: float) -> np.ndarray:
     a = axis / np.linalg.norm(axis)
     K = np.array([[0, -a[2], a[1]], [a[2], 0, -a[0]], [-a[1], a[0], 0]])
-    return np.eye(3) + np.sin(angle) * K + (1 - np.cos(angle)) * (K @ K)
+    rotation: np.ndarray = np.eye(3) + np.sin(angle) * K + (1 - np.cos(angle)) * (K @ K)
+    return rotation
 
 
 def test_laplacian_equals_independent_coboundary_nonorthogonal() -> None:
