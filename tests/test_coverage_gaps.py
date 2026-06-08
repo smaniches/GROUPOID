@@ -8,8 +8,10 @@ constructor, and the degenerate (edgeless) sheaf Laplacian spectrum.
 They do NOT change any module's documented status label (the
 "tested" / "smoke-tested" classifications in STATUS.md and the docs are
 about depth and pipeline integration, not line count). The persistence
-module is deliberately left untested, consistent with its documented
-"Implemented, not yet tested" status.
+module's behavioral tests live in ``test_persistence.py`` and
+``test_persistence_dimension_labels.py`` (the latter proves the
+dimension-aware H0/H1 separation and the H0-only divergence comparison
+against an independent minimum-spanning-tree reference).
 """
 
 from __future__ import annotations

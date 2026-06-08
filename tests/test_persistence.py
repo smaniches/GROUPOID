@@ -81,15 +81,19 @@ class TestComputePersistence:
         assert isinstance(summary, PersistenceSummary)
         assert summary.bottleneck_to_previous is None
 
-    def test_diagram_is_concatenated_finite_and_infinite(self):
-        """The stored diagram concatenates H0 and H1 bars and contains both
-        finite and (for H0) infinite death times."""
+    def test_diagram_is_dimension_labelled(self):
+        """The stored diagram concatenates H0 and H1 bars and retains the
+        homology dimension as a third column (shape (k, 3): birth, death,
+        dim). It contains both finite and (for H0) infinite death times,
+        and both dimension labels 0 and 1 are present for a circle."""
         pts = _circle(n=30)
         summary = compute_persistence(pts, max_dim=1)
         assert summary.diagram.ndim == 2
-        assert summary.diagram.shape[1] == 2
+        assert summary.diagram.shape[1] == 3  # birth, death, homology dim
         assert np.any(summary.diagram[:, 1] == np.inf)  # the infinite H0 bar
         assert np.any(summary.diagram[:, 1] < np.inf)  # finite bars exist
+        dims = set(summary.diagram[:, 2].astype(int).tolist())
+        assert dims == {0, 1}  # both H0 and H1 bars are labelled and present
 
 
 class TestTrackDivergence:
