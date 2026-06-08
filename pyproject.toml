@@ -21,6 +21,9 @@ keywords = [
     "riemannian-geometry",
     "groupoid",
     "topology",
+    "sheaf-theory",
+    "cohomology",
+    "topological-data-analysis",
 ]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
@@ -87,6 +90,7 @@ all = [
 [project.urls]
 Homepage = "https://github.com/smaniches/GROUPOID"
 Repository = "https://github.com/smaniches/GROUPOID"
+Documentation = "https://smaniches.github.io/GROUPOID"
 Issues = "https://github.com/smaniches/GROUPOID/issues"
 
 [tool.setuptools.packages.find]
