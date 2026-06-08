@@ -36,7 +36,7 @@
 |---|---|---|
 | Karcher mean | Tested | Hypothesis: mean of identical points = that point (500 examples) |
 | Morphism composition | Tested | Hypothesis: associativity verified (500 examples) |
-| H^1 cohomology | Tested | Hypothesis: vanishes on coboundaries (500 examples) |
+| H^1 cohomology | Tested | Hypothesis: vanishes on coboundaries (500 examples); Unit: identity holonomy on a complete coboundary, a nonzero H^1 matched against a closed-form analytic value (2*sqrt(1-cos(angle sum)) for commuting same-axis rotations), agreement with an independent holonomy-product recomputation on a two-triangle multi-cycle graph, and an incomplete cocycle (missing edge map) raises IncompleteCocycleError naming the edge |
 | Sheaf restriction maps | Tested | Hypothesis: functoriality verified (500 examples) |
 | Sheaf Laplacian | Tested | Unit: delta^T-delta equality, PSD, kernel content on non-orthogonal maps; Integration: spectral analysis, diffusion convergence |
 | Aggregation pipeline | Tested | Integration: multi-round convergence on S^2, consistency check |

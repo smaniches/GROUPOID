@@ -27,6 +27,13 @@ system. The following limitations apply.
 - H^1 computation uses cycle basis of the undirected graph. This is
   correct for 1-dimensional nerve complexes but does not generalize
   to higher-dimensional simplicial complexes without modification.
+- H^1 requires a fully specified cocycle: every edge of every basis
+  cycle must have a transport map in one direction or the other (the
+  reverse direction is inverted). A cycle's holonomy is the ordered
+  product over all of its edges, so if any edge map is missing the
+  holonomy is undefined. `compute_h1` raises `IncompleteCocycleError`
+  naming the missing edge rather than forming a meaningless partial
+  product (which would otherwise be reported as a false (in)consistency).
 - Sheaf Laplacian construction assumes uniform stalk dimension.
 - Parallel transport approximations (Schild's ladder, pole ladder)
   are discrete approximations. The pole ladder matches geomstats'
