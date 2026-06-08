@@ -39,23 +39,37 @@ integration tests:
   H^1 consistency checking, multi-round convergence tested
   (`groupoid.aggregation`)
 
+## Implemented, validated against ground truth, not yet integrated
+
+These modules have unit tests that validate behavior against a
+known-correct reference, but are not yet wired into the main aggregation
+pipeline:
+
+- **Parallel transport**: Schild's ladder and pole ladder
+  (`groupoid.transport`). The pole ladder is validated against geomstats'
+  analytic parallel transport on S^2 -- it matches in direction
+  (cosine > 0.999) and magnitude. Schild's ladder is a coarser
+  first-order approximation and is asserted as such. See
+  [LIMITATIONS.md](LIMITATIONS.md) for the convergence caveat.
+- **Persistent homology**: Vietoris-Rips filtration for divergence
+  tracking (`groupoid.persistence`). Unit-tested against point clouds of
+  known topology: a circle's dominant 1-cycle (via maximum persistence),
+  two-cluster component counting (`betti_0 == 2` at a finite filtration),
+  and a translation-invariant bottleneck distance. The Betti numbers are
+  degenerate under the default `thresh=inf` filtration; see
+  [LIMITATIONS.md](LIMITATIONS.md).
+
 ## Implemented, smoke-tested, not yet integrated
 
-These modules have implementations with smoke-test coverage but are not
-yet wired into the main aggregation pipeline:
+This module has implementation with smoke-test coverage only -- the tests
+check coarse sanity (steps stay on the manifold), not core correctness --
+and it is not yet wired into the main aggregation pipeline:
 
-- **Parallel transport**: Schild's ladder and pole ladder; smoke-tested
-  for tangent-vector norm preservation on S^2 (`groupoid.transport`)
 - **Riemannian optimizers**: SGD and Adam with exponential map
-  retraction; smoke-tested to stay on the manifold after a step
+  retraction; smoke-tested to stay on the manifold after a step, with the
+  curvature-adaptive learning rate covered for both its damping and
+  fallback branches. Core descent/convergence behavior is not validated
   (`groupoid.optimizer`)
-
-## Implemented, not yet tested
-
-This module has an implementation but lacks test coverage:
-
-- **Persistent homology**: Vietoris-Rips filtration for divergence
-  tracking (`groupoid.persistence`)
 
 ## Status
 
@@ -149,6 +163,17 @@ print(f"H^1 = {result.h1_norm:.2e} (consistent: {result.is_consistent})")
 ```bash
 pytest tests/ -v
 ```
+
+The suite reaches 100% line and branch coverage of the `groupoid` package
+on Python 3.10-3.12, enforced in CI:
+
+```bash
+pytest tests/ --cov=groupoid --cov-branch --cov-fail-under=100
+```
+
+Coverage measures which lines run, not whether behavior is correct. See
+[STATUS.md](STATUS.md) for the per-component validation depth, which
+coverage alone does not capture.
 
 ## Documentation
 

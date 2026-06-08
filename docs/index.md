@@ -25,18 +25,18 @@ irreconcilable model divergence before it degrades performance.
 | `groupoid.laplacian` | Sheaf Laplacian, spectral analysis, diffusion | Unit: PSD + delta^T-delta equality on non-orthogonal maps, transport-consistent kernel; Integration: spectral analysis, diffusion |
 | `groupoid.aggregation` | Transport-aware federated aggregation pipeline | Integration tests |
 
+## Implemented, validated against ground truth, not yet integrated
+
+| Module | Description | Test coverage |
+|---|---|---|
+| `groupoid.transport` | Schild's ladder, pole ladder parallel transport | Unit: pole ladder matches geomstats analytic parallel transport in direction (cosine > 0.999) and magnitude on S^2; Schild's ladder asserted as a coarser approximation |
+| `groupoid.persistence` | Vietoris-Rips persistent homology | Unit: circle 1-cycle via max persistence, two-cluster component count at a finite filtration, translation-invariant bottleneck. Betti degeneracy at thresh=inf documented in LIMITATIONS |
+
 ## Implemented, smoke-tested, not yet integrated
 
 | Module | Description | Test coverage |
 |---|---|---|
-| `groupoid.transport` | Schild's ladder, pole ladder parallel transport | Smoke: norm preservation on S^2 |
-| `groupoid.optimizer` | Riemannian SGD, Adam, curvature-adaptive LR | Smoke: step stays on S^2 |
-
-## Implemented, not yet tested
-
-| Module | Description | Status |
-|---|---|---|
-| `groupoid.persistence` | Vietoris-Rips persistent homology | Untested |
+| `groupoid.optimizer` | Riemannian SGD, Adam, curvature-adaptive LR | Smoke: step stays on S^2; curvature-adaptive LR damps/falls back. Core descent/convergence not validated |
 
 ## Not yet implemented
 
@@ -44,6 +44,14 @@ irreconcilable model divergence before it degrades performance.
 - Federated training loop with real neural networks
 - Communication protocol for distributed deployment
 - Convergence guarantees or formal proofs
+
+## Test coverage
+
+The committed suite reaches 100% line and branch coverage of the
+`groupoid` package on Python 3.10-3.12, enforced in CI
+(`--cov-branch --cov-fail-under=100`). Coverage measures which lines run,
+not whether behavior is correct; the tables above record the validation
+depth per module, which coverage alone does not capture.
 
 ## Architecture
 

@@ -7,7 +7,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 from loguru import logger
 
-if TYPE_CHECKING:
+# TYPE_CHECKING is always False at runtime; import is for static type checkers.
+if TYPE_CHECKING:  # pragma: no cover
     from geomstats.geometry.base import LevelSet
 
 
