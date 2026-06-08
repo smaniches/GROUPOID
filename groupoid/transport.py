@@ -28,8 +28,11 @@ def schild_ladder(
     """Parallel transport via Schild's ladder.
 
     An iterative approximation of parallel transport that only requires
-    the exponential and logarithmic maps. Converges to exact transport
-    as n_rungs increases.
+    the exponential and logarithmic maps. This is the coarser of the two
+    ladders: on S^2 its direction agrees with the analytic parallel
+    transport only to cosine ~0.98 and does not converge to the exact
+    value as ``n_rungs`` increases (see ``pole_ladder`` for the accurate
+    variant and LIMITATIONS.md for the measured behavior).
 
     Parameters
     ----------
