@@ -87,33 +87,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -e ".[dev]"
-      - name: Run benchmarks
+      # Benchmarks run for information only. There is no regression gate:
+      # timing baselines recorded on one machine are not comparable to a
+      # different CI runner, so gating CI against such a baseline would be a
+      # meaningless pass/fail. The benchmark JSON is uploaded as an artifact
+      # for inspection. A real cross-run regression gate can be added later
+      # (e.g. github-action-benchmark with continuous baselines), at which
+      # point a committed, machine-tagged baseline becomes meaningful.
+      - name: Run benchmarks (informational only, not a gate)
         run: |
           pytest benchmarks/ -v --benchmark-json=benchmark_results.json || true
-      - name: Check for regression
-        run: |
-          python -c "
-          import json, os, sys
-          if not os.path.exists('benchmark_results.json'):
-              print('SKIP: benchmark_results.json not produced; skipping regression check')
-              sys.exit(0)
-          with open('benchmark_results.json') as f:
-              results = json.load(f)
-          with open('benchmarks/baseline.json') as f:
-              baseline = json.load(f)
-          for bench in results.get('benchmarks', []):
-              name = bench['name']
-              current_mean = bench['stats']['mean']
-              for base_bench in baseline.get('benchmarks', []):
-                  if base_bench['name'] == name:
-                      base_mean = base_bench['stats']['mean']
-                      ratio = current_mean / base_mean
-                      if ratio > 1.20:
-                          print(f'REGRESSION: {name} is {ratio:.2f}x slower')
-                          sys.exit(1)
-                      else:
-                          print(f'OK: {name} is {ratio:.2f}x baseline')
-          "
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark_results.json
+          if-no-files-found: ignore
 
   docs:
     runs-on: ubuntu-latest

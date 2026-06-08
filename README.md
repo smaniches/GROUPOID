@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/smaniches/GROUPOID/actions/workflows/ci.yml/badge.svg)](https://github.com/smaniches/GROUPOID/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10-3.12](https://img.shields.io/badge/python-3.10--3.12-blue.svg)](https://www.python.org/downloads/)
 [![Status](https://img.shields.io/badge/status-pre--alpha-orange.svg)](#status)
 
 > **Pre-alpha research prototype.** This is an early-stage exploration of
@@ -61,7 +61,44 @@ This module has an implementation but lacks test coverage:
 
 Pre-alpha. See [STATUS.md](STATUS.md) for details.
 
+## Related work / why not just use X?
+
+GROUPOID sits at the intersection of three existing toolchains and is not a
+replacement for any of them. It is an exploratory prototype of one specific
+idea -- transport-groupoid aggregation with cohomological consistency checking
+-- not a federated learning framework.
+
+- **Flower / FedML / TensorFlow Federated** -- mature federated learning
+  frameworks providing the client/server communication, orchestration, and
+  real training loops that GROUPOID deliberately does **not** implement (see
+  [LIMITATIONS.md](LIMITATIONS.md): "Not a federated learning framework").
+  GROUPOID is about the *aggregation operator*, not the FL plumbing; in
+  principle a transport-aware aggregator like this one would be dropped into
+  such a framework, not used instead of it.
+- **geomstats / pymanopt** -- Riemannian-geometry libraries. GROUPOID *uses*
+  geomstats for the manifold primitives (the Karcher mean delegates to
+  geomstats `FrechetMean`). What GROUPOID adds on top is the transport
+  groupoid, the H^1 holonomy/consistency check, and the cellular-sheaf
+  Laplacian wiring -- not the manifold geometry itself.
+- **Cellular-sheaf spectral methods** (the sheaf-Laplacian line of work,
+  e.g. Hansen and Ghrist's spectral theory of cellular sheaves, and sheaf
+  neural networks) -- GROUPOID's sheaf Laplacian follows this line and is the
+  geometric machinery for detecting inconsistency across clients. The
+  contribution here is applying it to the federated-aggregation setting, not
+  the sheaf-Laplacian construction in the abstract.
+
+In short: use Flower/FedML/TFF for the FL system, use geomstats/pymanopt for
+manifold math; GROUPOID is a research prototype testing whether combining a
+transport groupoid with sheaf-cohomological consistency yields a better
+aggregation operator than Euclidean FedAvg. That hypothesis is **not yet
+validated** (see [STATUS.md](STATUS.md)).
+
 ## Installation
+
+Requires **Python 3.10, 3.11, or 3.12**. Python 3.13+ is not supported: the
+`numpy<2.0` / `scipy<1.14` pins (needed for geomstats compatibility, see
+[LIMITATIONS.md](LIMITATIONS.md)) have no wheels there, so `pip` will refuse
+with a `Requires-Python` message rather than attempt a source build.
 
 From source (not published on PyPI):
 

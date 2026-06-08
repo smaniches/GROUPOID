@@ -8,7 +8,11 @@ version = "0.1.0.dev0"
 description = "Research prototype: groupoid-based aggregation for federated learning on Riemannian manifolds"
 readme = "README.md"
 license = "Apache-2.0"
-requires-python = ">=3.10"
+# Upper bound is real: the numpy<2.0 / scipy<1.14 pins below (required for
+# geomstats compatibility) have no wheels for Python 3.13+, so 3.13 would
+# attempt a doomed source build. Capping here makes pip refuse cleanly with a
+# Requires-Python message instead. Supported: 3.10-3.12.
+requires-python = ">=3.10,<3.13"
 authors = [
     {name = "Santiago Maniches", email = "santiago.maniches@gmail.com"},
 ]
