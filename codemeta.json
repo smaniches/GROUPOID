@@ -23,6 +23,9 @@
     "federated-learning",
     "riemannian-geometry",
     "groupoid",
-    "topology"
+    "topology",
+    "sheaf-theory",
+    "cohomology",
+    "topological-data-analysis"
   ]
 }
