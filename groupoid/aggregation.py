@@ -27,6 +27,18 @@ from groupoid.groupoid import Morphism, compose, inverse
 from groupoid.manifold import karcher_mean
 
 
+class DisconnectedClientGraphError(Exception):
+    """Raised when the client graph has no transport path to the base node.
+
+    Aggregation transports every client's parameters to the base node along
+    a path in the client graph. If a client lies in a different connected
+    component from the base node, no such path exists and the parameters
+    cannot be aligned. This error replaces the raw networkx
+    ``NetworkXNoPath`` with a domain-meaningful message naming the
+    unreachable node and the base.
+    """
+
+
 @dataclass
 class FederatedRound:
     """Result of a single federated aggregation round."""
@@ -87,7 +99,13 @@ class TransportGroupoidAggregator:
         if node == self.base_node:
             return None
 
-        path = nx.shortest_path(self.graph.to_undirected(), node, self.base_node)
+        try:
+            path = nx.shortest_path(self.graph.to_undirected(), node, self.base_node)
+        except nx.NetworkXNoPath as e:
+            raise DisconnectedClientGraphError(
+                f"client graph is disconnected: no transport path from "
+                f"{node} to base {self.base_node}"
+            ) from e
         composite: Morphism | None = None
 
         for i in range(len(path) - 1):

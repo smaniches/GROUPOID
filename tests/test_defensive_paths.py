@@ -9,16 +9,17 @@ Each test validates an actual behavioral contract, not just line execution:
   (forward/backward-compatibility shim).
 - ``curvature_adaptive_lr`` falls back to the base learning rate when a
   manifold declares ``sectional_curvature`` but raises ``NotImplementedError``.
-- ``compute_h1`` skips a cycle for which no transport maps exist at all,
-  returning a finite norm instead of raising.
+- ``compute_h1`` raises ``IncompleteCocycleError`` for a cycle whose edges
+  have no transport maps, because the holonomy product is then undefined.
 """
 
 from __future__ import annotations
 
 import networkx as nx
 import numpy as np
+import pytest
 
-from groupoid.cohomology import compute_h1
+from groupoid.cohomology import IncompleteCocycleError, compute_h1
 from groupoid.groupoid import Morphism
 from groupoid.manifold import karcher_mean
 from groupoid.optimizer import curvature_adaptive_lr
@@ -123,11 +124,12 @@ class TestCurvatureAdaptiveLRError:
 
 
 class TestCohomologyAllEdgesMissing:
-    def test_cycle_with_no_transport_maps_is_skipped(self):
+    def test_cycle_with_no_transport_maps_raises(self):
         """A cycle for which no transport map exists in either direction for
-        any edge leaves the holonomy undefined; compute_h1 must skip the
-        cycle and return a finite 0.0 rather than raising."""
+        any edge leaves the holonomy undefined; compute_h1 must raise
+        IncompleteCocycleError naming the first missing edge rather than
+        silently returning a (false) 0.0 consistency value."""
         graph = nx.DiGraph()
         graph.add_edges_from([("A", "B"), ("B", "C"), ("A", "C")])
-        h1 = compute_h1(graph, {})
-        assert h1 == 0.0
+        with pytest.raises(IncompleteCocycleError, match="no transport map for edge"):
+            compute_h1(graph, {})

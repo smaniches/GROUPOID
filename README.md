@@ -27,8 +27,12 @@ integration tests:
 - **Karcher mean** on Riemannian manifolds via geomstats (`groupoid.manifold`)
 - **Transport groupoid**: morphism composition, inverse, composition
   associativity verified by Hypothesis (`groupoid.groupoid`)
-- **First cohomology H^1**: holonomy-based obstruction detection on
-  cycle basis; coboundary vanishing tested (`groupoid.cohomology`)
+- **First cohomology H^1**: holonomy-based obstruction detection on the
+  cycle basis; coboundary vanishing and a multi-cycle independent
+  holonomy-product reference tested; an incompletely specified cocycle
+  (a cycle with a missing edge map) raises `IncompleteCocycleError`
+  rather than reporting a partial-product false positive
+  (`groupoid.cohomology`)
 - **Cellular sheaf**: restriction maps with functoriality tested
   (`groupoid.sheaf`)
 - **Sheaf Laplacian**: connection Laplacian L = delta^T delta; PSD and

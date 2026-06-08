@@ -20,7 +20,7 @@ import pytest
 from geomstats.geometry.hypersphere import Hypersphere
 
 from groupoid.aggregation import TransportGroupoidAggregator
-from groupoid.cohomology import compute_h1
+from groupoid.cohomology import IncompleteCocycleError, compute_h1
 from groupoid.groupoid import CompositionError, Morphism, compose
 from groupoid.laplacian import spectral_analysis
 from groupoid.optimizer import RiemannianAdam, RiemannianSGD, curvature_adaptive_lr
@@ -39,12 +39,17 @@ class TestGroupoidErrors:
 
 
 class TestCohomologyMissingEdge:
-    """Graceful handling when a cycle edge has no transport map."""
+    """A cycle edge with no transport map leaves the holonomy undefined."""
 
-    def test_missing_edge_in_cycle_is_skipped(self):
-        # Triangle cycle A-B-C-A, but the C-A edge has no transport map
-        # in either direction. compute_h1 must skip it and still return a
-        # finite norm rather than raising.
+    def test_missing_edge_in_cycle_raises(self):
+        # Triangle cycle A-B-C-A, but the C-A edge has no transport map in
+        # either direction. The holonomy is the ordered product over ALL
+        # cycle edges, so an incompletely specified cocycle has an undefined
+        # holonomy: compute_h1 must raise IncompleteCocycleError naming the
+        # missing edge, NOT silently form a partial product and report a
+        # (false) consistency value.
+        # Structural triangle A-B-C-A: the undirected cycle basis is the full
+        # triangle, but the A-C edge deliberately has no transport map.
         graph = nx.DiGraph()
         graph.add_edges_from([("A", "B"), ("B", "C"), ("A", "C")])
         transport_maps = {
@@ -52,11 +57,8 @@ class TestCohomologyMissingEdge:
             ("B", "C"): np.eye(2),
             # deliberately omit ("A", "C") / ("C", "A")
         }
-        h1 = compute_h1(graph, transport_maps)
-        assert np.isfinite(h1)
-        # With identity maps on the two present edges, holonomy = I,
-        # so the deviation is ~0.
-        assert h1 == pytest.approx(0.0, abs=1e-9)
+        with pytest.raises(IncompleteCocycleError, match="no transport map for edge"):
+            compute_h1(graph, transport_maps)
 
 
 class TestAggregationPaths:

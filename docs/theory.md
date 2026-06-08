@@ -65,6 +65,14 @@ $$
 If $\text{Hol}(\gamma) = \text{Id}$ for all basis cycles $\gamma$, then
 $H^1 = 0$ and the local models are globally consistent.
 
+The holonomy is the ordered product over **every** edge of the cycle, so the
+cocycle must be fully specified: each cycle edge needs a transport map in one
+direction or the other (the reverse direction is inverted). If an edge map is
+missing, the holonomy is undefined — a product over a strict subset of the
+cycle's edges is not a holonomy and must not be reported as a consistency
+result. `compute_h1` therefore raises `IncompleteCocycleError`, naming the
+missing edge, instead of silently forming a partial product.
+
 ## Sheaf Theory and Restriction Maps
 
 A **cellular sheaf** $\mathcal{F}$ on $G$ assigns:
