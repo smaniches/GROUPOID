@@ -146,6 +146,82 @@ class TestFederatedPipeline:
             assert round_trip.source == u
             assert round_trip.target == u
 
+    def test_forward_direction_transport_traversal(self):
+        """Aggregation must use a registered transport map directly when the
+        shortest path traverses an edge in its registered direction.
+
+        The diamond fixture above always traverses edges opposite to their
+        registered orientation (leaves -> base), so it exercises only the
+        inverse-edge branch of ``_get_transport_to_base``. Here the base node
+        is the edge target, so the path follows the edge as registered and the
+        forward-lookup branch is taken instead.
+        """
+        manifold = self.manifold
+        graph = nx.DiGraph([("A", "B")])
+
+        aggregator = TransportGroupoidAggregator(manifold=manifold, graph=graph, base_node="B")
+        aggregator.register_transport("A", "B", np.eye(3))
+
+        # _get_transport_to_base("A") follows the registered edge A -> B.
+        forward_map = aggregator._get_transport_to_base("A")
+        np.testing.assert_allclose(forward_map, np.eye(3), atol=1e-12)
+
+        north = np.array([0.0, 0.0, 1.0])
+        result = aggregator.aggregate({"A": north, "B": north})
+        assert result.global_params.shape == (3,)
+        assert abs(np.linalg.norm(result.global_params) - 1.0) < 1e-4
+
+    def test_weighted_aggregation_pulls_mean_toward_heavy_client(self):
+        """Per-client weights must be honored by the aggregation pipeline.
+
+        With identity transport on a single edge both clients stay in the base
+        frame, so a dominant weight on one client must pull the Karcher mean
+        toward that client's parameters relative to the unweighted mean. Guards
+        the ``weights is not None`` normalization branch in ``aggregate``.
+        """
+        manifold = self.manifold
+        graph = nx.DiGraph([("A", "B")])
+        aggregator = TransportGroupoidAggregator(manifold=manifold, graph=graph, base_node="A")
+        aggregator.register_transport("A", "B", np.eye(3))
+
+        params = {
+            "A": np.array([0.0, 0.0, 1.0]),
+            "B": np.array([1.0, 0.0, 0.0]),
+        }
+
+        unweighted = aggregator.aggregate(params)
+        weighted = aggregator.aggregate(params, weights={"A": 100.0, "B": 1.0})
+
+        assert weighted.is_consistent
+        assert abs(np.linalg.norm(weighted.global_params) - 1.0) < 1e-4
+        # A heavy weight on A moves the mean closer to A's parameters.
+        assert np.dot(weighted.global_params, params["A"]) > np.dot(
+            unweighted.global_params, params["A"]
+        )
+
+    def test_inconsistent_transport_flags_round(self):
+        """A non-coboundary cocycle must drive H^1 above threshold and mark the
+        round inconsistent (the warning branch in ``aggregate``).
+
+        A non-orthogonal map on a triangle cycle gives holonomy != I, so the
+        H^1 norm exceeds the default threshold and ``is_consistent`` is False.
+        """
+        manifold = self.manifold
+        graph = nx.DiGraph([("A", "B"), ("B", "C"), ("A", "C")])
+        aggregator = TransportGroupoidAggregator(
+            manifold=manifold, graph=graph, base_node="A", consistency_threshold=1e-6
+        )
+        skew = np.diag([2.0, 1.0, 1.0])
+        aggregator.register_transport("A", "B", skew)
+        aggregator.register_transport("B", "C", np.eye(3))
+        aggregator.register_transport("A", "C", np.eye(3))
+
+        north = np.array([0.0, 0.0, 1.0])
+        result = aggregator.aggregate({"A": north, "B": north, "C": north})
+
+        assert not result.is_consistent
+        assert result.h1_norm > aggregator.consistency_threshold
+
     def test_multiple_aggregation_rounds(self):
         """Multiple rounds should maintain consistency."""
         aggregator = TransportGroupoidAggregator(
