@@ -17,9 +17,13 @@
   pipeline.
 - The persistence module is unit-tested against point clouds of known
   topology (a circle's dominant 1-cycle, two-cluster component counting,
-  translation-invariant bottleneck distance). It is not yet integrated
-  into the main pipeline. See the Betti-degeneracy caveat in
-  LIMITATIONS.md.
+  translation-invariant bottleneck distance). The persistence diagram
+  retains a homology-dimension label, and `track_divergence` compares H0
+  against H0 only; this is verified against an independent
+  minimum-spanning-tree reconstruction of the H0 diagram (the finite H0
+  death times equal the MST edge weights), and an H1-only change is shown
+  not to leak into the H0 divergence. It is not yet integrated into the
+  main pipeline. See the Betti-degeneracy caveat in LIMITATIONS.md.
 - The optimizer module has smoke-test coverage only (Riemannian SGD/Adam
   steps stay on the manifold; curvature-adaptive learning rate damps in
   positive curvature and falls back gracefully). Its core descent and
@@ -42,7 +46,7 @@
 | Aggregation pipeline | Tested | Integration: multi-round convergence on S^2, consistency check |
 | Parallel transport | Tested (not integrated) | Unit: pole ladder matches geomstats analytic parallel transport in direction (cosine > 0.999) and magnitude on S^2; Schild's ladder asserted as a coarser approximation; transport-matrix constructor is norm-preserving |
 | Riemannian optimizers | Smoke-tested | Smoke: SGD and Adam steps stay on S^2; curvature-adaptive LR damps in positive curvature and falls back without curvature. Core descent/convergence not validated |
-| Persistent homology | Tested (not integrated) | Unit: circle's dominant 1-cycle via max persistence; two-cluster component count (betti_0 = 2) at a finite filtration; translation-invariant bottleneck distance. Betti degeneracy at thresh=inf documented in LIMITATIONS.md |
+| Persistent homology | Tested (not integrated) | Unit: circle's dominant 1-cycle via max persistence; two-cluster component count (betti_0 = 2) at a finite filtration; translation-invariant bottleneck distance. Dimension-aware: diagram retains an H0/H1 label, `track_divergence` compares H0-vs-H0 only, verified against an independent MST reconstruction of the H0 diagram and shown to not leak an H1-only change into the H0 divergence. Betti degeneracy at thresh=inf documented in LIMITATIONS.md |
 | Differential privacy | Not implemented | Listed as dependency only |
 | Real FL training | Not implemented | |
 | Convergence proofs | Not available | |

@@ -59,9 +59,12 @@ pipeline:
   tracking (`groupoid.persistence`). Unit-tested against point clouds of
   known topology: a circle's dominant 1-cycle (via maximum persistence),
   two-cluster component counting (`betti_0 == 2` at a finite filtration),
-  and a translation-invariant bottleneck distance. The Betti numbers are
-  degenerate under the default `thresh=inf` filtration; see
-  [LIMITATIONS.md](LIMITATIONS.md).
+  and a translation-invariant bottleneck distance. The persistence diagram
+  retains a homology-dimension label, and `track_divergence` compares H0
+  against H0 only (it does not pool features across dimensions); this is
+  verified against an independent minimum-spanning-tree reconstruction of
+  the H0 diagram. The Betti numbers are degenerate under the default
+  `thresh=inf` filtration; see [LIMITATIONS.md](LIMITATIONS.md).
 
 ## Implemented, smoke-tested, not yet integrated
 

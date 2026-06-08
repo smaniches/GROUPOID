@@ -30,7 +30,7 @@ irreconcilable model divergence before it degrades performance.
 | Module | Description | Test coverage |
 |---|---|---|
 | `groupoid.transport` | Schild's ladder, pole ladder parallel transport | Unit: pole ladder matches geomstats analytic parallel transport in direction (cosine > 0.999) and magnitude on S^2; Schild's ladder asserted as a coarser approximation |
-| `groupoid.persistence` | Vietoris-Rips persistent homology | Unit: circle 1-cycle via max persistence, two-cluster component count at a finite filtration, translation-invariant bottleneck. Betti degeneracy at thresh=inf documented in LIMITATIONS |
+| `groupoid.persistence` | Vietoris-Rips persistent homology | Unit: circle 1-cycle via max persistence, two-cluster component count at a finite filtration, translation-invariant bottleneck. Dimension-aware: diagram retains an H0/H1 label and `track_divergence` compares H0-vs-H0 only, verified against an independent MST reconstruction of the H0 diagram and shown not to leak an H1-only change into the H0 divergence. Betti degeneracy at thresh=inf documented in LIMITATIONS |
 
 ## Implemented, smoke-tested, not yet integrated
 
