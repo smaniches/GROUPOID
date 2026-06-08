@@ -29,8 +29,20 @@ system. The following limitations apply.
   to higher-dimensional simplicial complexes without modification.
 - Sheaf Laplacian construction assumes uniform stalk dimension.
 - Parallel transport approximations (Schild's ladder, pole ladder)
-  are first-order accurate per rung. Accuracy depends on step count
-  and geodesic distance.
+  are discrete approximations. The pole ladder matches geomstats'
+  analytic parallel transport closely in direction (cosine > 0.999 on a
+  60-degree S^2 hop) but does not converge to zero error as rungs
+  increase; it plateaus at a small residual (~0.02 here) and drifts
+  slightly off the endpoint tangent plane. Schild's ladder is markedly
+  coarser (cosine ~0.98 on the same hop).
+- Persistent homology Betti numbers are degenerate under the default
+  filtration. `compute_persistence` counts only bars that die at
+  infinity, so under the default `thresh=inf` (used by
+  `track_divergence`) the Vietoris-Rips complex is fully connected and
+  `betti_0 == 1`, `betti_1 == 0` regardless of the underlying topology.
+  The informative loop signal lives in `max_persistence` / the finite
+  bars; meaningful component counts require passing a finite
+  `max_edge_length` between the intra- and inter-cluster scales.
 - No formal convergence rate analysis exists for the groupoid
   aggregation method.
 
@@ -43,10 +55,17 @@ system. The following limitations apply.
 
 ## Test coverage
 
-- 8 of 9 modules have test coverage.
-- The transport and optimizer modules have smoke-test coverage
-  (norm-preserving transport; optimizer steps stay on the manifold).
-- The persistence module is untested.
+- All 9 modules have test coverage. The committed suite reaches 100% line
+  and branch coverage of the `groupoid` package on Python 3.10-3.12,
+  enforced in CI (`--cov-branch --cov-fail-under=100`). Two unreachable
+  defensive guards and a `TYPE_CHECKING` import are excluded via
+  `# pragma: no cover` with justifications.
+- Coverage is not validation. The transport and persistence modules are
+  now validated against ground truth (analytic parallel transport;
+  known-topology point clouds) but remain unintegrated into the pipeline.
+  The optimizer module has smoke-test coverage only: its steps stay on
+  the manifold and the curvature-adaptive learning rate behaves sensibly,
+  but its core descent/convergence behavior is not validated.
 - No end-to-end test with real neural network training exists.
 - Property-based tests use 500 examples per property, which provides
   reasonable but not exhaustive coverage of edge cases.

@@ -156,8 +156,12 @@ class TransportGroupoidAggregator:
                 transported[node] = params
                 transport_residuals[node] = 0.0
             else:
+                # _get_transport_to_base returns None only for node == base_node
+                # (excluded by this else); a disconnected graph raises
+                # NetworkXNoPath. This guard is therefore defensively
+                # unreachable.
                 T = self._get_transport_to_base(node)
-                if T is None:
+                if T is None:  # pragma: no cover - unreachable defensive guard (see above)
                     raise ValueError(f"No transport path from {node} to {self.base_node}")
                 transported_params = T @ params
                 transported[node] = transported_params
@@ -183,8 +187,10 @@ class TransportGroupoidAggregator:
             if node == self.base_node:
                 local_updates[node] = global_params
             else:
+                # Same defensively-unreachable guard as in the forward
+                # transport loop above.
                 T = self._get_transport_to_base(node)
-                if T is None:
+                if T is None:  # pragma: no cover - unreachable defensive guard (see above)
                     raise ValueError(f"No transport path from {node} to {self.base_node}")
                 T_inv = np.linalg.inv(T)
                 local_updates[node] = T_inv @ global_params

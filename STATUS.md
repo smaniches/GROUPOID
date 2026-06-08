@@ -10,11 +10,21 @@
 - The aggregation pipeline connects these primitives into a working
   federated round on synthetic data (tested on S^2 with rotation
   transport maps).
-- The transport and optimizer modules have smoke-test coverage
-  (parallel transport preserves tangent-vector norm; Riemannian SGD/Adam
-  steps stay on the manifold) but are not yet integrated into the main
-  pipeline. The persistence module is implemented but untested and
-  likewise not integrated.
+- The parallel-transport module is validated against ground truth: the
+  pole ladder matches geomstats' analytic parallel transport in direction
+  (cosine > 0.999) and magnitude on S^2; Schild's ladder is a coarser
+  first-order approximation. It is not yet integrated into the main
+  pipeline.
+- The persistence module is unit-tested against point clouds of known
+  topology (a circle's dominant 1-cycle, two-cluster component counting,
+  translation-invariant bottleneck distance). It is not yet integrated
+  into the main pipeline. See the Betti-degeneracy caveat in
+  LIMITATIONS.md.
+- The optimizer module has smoke-test coverage only (Riemannian SGD/Adam
+  steps stay on the manifold; curvature-adaptive learning rate damps in
+  positive curvature and falls back gracefully). Its core descent and
+  convergence behavior is not validated, and it is not yet integrated
+  into the main pipeline.
 - No federated training loop with real neural networks exists yet.
 - No differential privacy mechanism is implemented.
 - No formal convergence analysis or proofs exist.
@@ -30,12 +40,29 @@
 | Sheaf restriction maps | Tested | Hypothesis: functoriality verified (500 examples) |
 | Sheaf Laplacian | Tested | Unit: delta^T-delta equality, PSD, kernel content on non-orthogonal maps; Integration: spectral analysis, diffusion convergence |
 | Aggregation pipeline | Tested | Integration: multi-round convergence on S^2, consistency check |
-| Parallel transport | Smoke-tested | Smoke: Schild's ladder and pole ladder preserve tangent-vector norm on S^2 |
-| Riemannian optimizers | Smoke-tested | Smoke: SGD and Adam steps stay on S^2 |
-| Persistent homology | Implemented | Not tested |
+| Parallel transport | Tested (not integrated) | Unit: pole ladder matches geomstats analytic parallel transport in direction (cosine > 0.999) and magnitude on S^2; Schild's ladder asserted as a coarser approximation; transport-matrix constructor is norm-preserving |
+| Riemannian optimizers | Smoke-tested | Smoke: SGD and Adam steps stay on S^2; curvature-adaptive LR damps in positive curvature and falls back without curvature. Core descent/convergence not validated |
+| Persistent homology | Tested (not integrated) | Unit: circle's dominant 1-cycle via max persistence; two-cluster component count (betti_0 = 2) at a finite filtration; translation-invariant bottleneck distance. Betti degeneracy at thresh=inf documented in LIMITATIONS.md |
 | Differential privacy | Not implemented | Listed as dependency only |
 | Real FL training | Not implemented | |
 | Convergence proofs | Not available | |
+
+"Smoke-tested" means the tests exercise the code and check coarse sanity
+properties (e.g. an optimizer step stays on the manifold) but do not
+validate correctness against ground truth. "Tested" means the tests check
+behavior against a known-correct reference or analytic result.
+
+## Test coverage
+
+The committed test suite reaches 100% line and branch coverage of the
+`groupoid` package on the supported interpreters (Python 3.10-3.12),
+enforced in CI with `--cov-branch --cov-fail-under=100`. The only excluded
+lines are two provably-unreachable defensive guards in `aggregation.py` and
+a `TYPE_CHECKING`-only import in `manifold.py`, each marked with
+`# pragma: no cover` and a one-line justification. Coverage measures which
+lines run, not whether behavior is correct; the validation-status table
+above records correctness depth per component, which coverage alone does
+not capture.
 
 ## Versioning
 
