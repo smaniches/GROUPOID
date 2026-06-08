@@ -4,16 +4,24 @@
 
 ### From source (development)
 
+Requires Python 3.10, 3.11, or 3.12 (not 3.13+; see the note below).
+
 ```bash
 git clone https://github.com/smaniches/GROUPOID.git
 cd GROUPOID
-pip install -e ".[all]"
+pip install -e ".[dev]"
 pre-commit install
 ```
 
 !!! note
 
     GROUPOID is not published on PyPI. Install from source as shown above.
+
+!!! note "Python version"
+
+    The `numpy<2.0` / `scipy<1.14` pins (required for geomstats compatibility)
+    have no wheels for Python 3.13+, so `pip` will refuse to install there with
+    a `Requires-Python` message. Use Python 3.10-3.12.
 
 ## Basic Usage
 
