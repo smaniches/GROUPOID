@@ -31,7 +31,6 @@ try:
     HAS_WANDB = True
 except ImportError:
     HAS_WANDB = False
-    logger.warning("wandb not installed, synthetic metrics will only be logged locally")
 
 # Deliberately NOT a "results" project: this is a scratch namespace so a
 # fabricated curve can never be logged into a real benchmark results project.
@@ -72,6 +71,9 @@ def make_synthetic_curve_demo(
         "and no MNIST data is used. Do not treat the output as results."
     )
 
+    if log_to_wandb and not HAS_WANDB:
+        logger.warning("wandb is not installed; synthetic metrics will only be logged locally.")
+
     if log_to_wandb and HAS_WANDB:
         wandb.init(
             project=WANDB_DEMO_PROJECT,
@@ -84,11 +86,12 @@ def make_synthetic_curve_demo(
             },
         )
 
+    rng = np.random.default_rng()
     metrics: dict[str, list] = {"round": [], "loss": [], "accuracy": []}
 
     for round_idx in range(n_rounds):
-        loss = 2.0 * np.exp(-0.3 * round_idx) + np.random.normal(0, 0.05)
-        accuracy = 1.0 - np.exp(-0.2 * round_idx) + np.random.normal(0, 0.02)
+        loss = 2.0 * np.exp(-0.3 * round_idx) + rng.normal(0, 0.05)
+        accuracy = 1.0 - np.exp(-0.2 * round_idx) + rng.normal(0, 0.02)
         accuracy = np.clip(accuracy, 0.0, 1.0)
 
         metrics["round"].append(round_idx)

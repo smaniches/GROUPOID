@@ -49,13 +49,13 @@ L shape                  : (12, 12)
 max|L - deltaT_delta|    : 4.441e-16   (expect < 1e-12)
 max|L - L^T| (symmetry)  : 0.000e+00   (expect < 1e-12)
 min eigenvalue (PSD)     : 2.813e-02   (expect >= -1e-9)
-||L @ consistent_section|| : 4.981e-16   (expect < 1e-9, in kernel)
+||L @ consistent_section|| : 6.189e-16   (expect < 1e-9, in kernel)
 ||L @ constant_section||   : 3.368e+00   (expect > 1e-3, NOT in kernel)
 dim ker(L)                 : 3   (expect == stalk_dim = 3)
 RESULT: sheaf-Laplacian invariants hold (deltaT-delta, PSD, kernel).
 ```
 
-The floating-point residuals (`4.441e-16`, `4.981e-16`) are at machine epsilon
+The floating-point residuals (`4.441e-16`, `6.189e-16`) are at machine epsilon
 and may differ in the last digit on a different BLAS/CPU; the bracketed
 tolerances (`< 1e-12`, `< 1e-9`, `> 1e-3`, `== 3`) are the contract and hold
 across platforms. The integer `dim ker(L) = 3` and `min eigenvalue` sign are

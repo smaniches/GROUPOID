@@ -85,7 +85,8 @@ def main() -> None:
     gauges = {n: _rotation(rng2.standard_normal(3), rng2.uniform(0.5, 2.5)) for n in nodes}
     sheaf2 = Sheaf(g)
     for u, v in EDGES:
-        sheaf2.set_restriction_map(u, v, gauges[v] @ np.linalg.inv(gauges[u]))
+        # gauges are rotations (orthogonal), so g_u^{-1} == g_u.T (exact, O(1)).
+        sheaf2.set_restriction_map(u, v, gauges[v] @ gauges[u].T)
     laplacian2 = build_sheaf_laplacian(sheaf2, stalk_dim=D)
     s = rng2.standard_normal(D)
     x_consistent = np.concatenate([gauges[n] @ s for n in nodes])
