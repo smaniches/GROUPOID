@@ -6,6 +6,14 @@ version: 0.1.0.dev0
 date-released: 2026-05-25
 license: Apache-2.0
 repository-code: "https://github.com/smaniches/GROUPOID"
+doi: 10.5281/zenodo.20563974
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.20563974
+    description: "Concept DOI (all versions)"
+  - type: doi
+    value: 10.5281/zenodo.20563975
+    description: "Version DOI (v0.1.0.dev0)"
 authors:
   - family-names: Maniches
     given-names: Santiago
