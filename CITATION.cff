@@ -2,18 +2,18 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 type: software
 title: "GROUPOID: Groupoid-based aggregation for federated learning on Riemannian manifolds"
-version: 0.1.0.dev0
-date-released: 2026-05-25
+version: 0.1.0.dev1
+date-released: 2026-06-16
 license: Apache-2.0
 repository-code: "https://github.com/smaniches/GROUPOID"
 doi: 10.5281/zenodo.20563974
 identifiers:
   - type: doi
     value: 10.5281/zenodo.20563974
-    description: "Concept DOI (all versions)"
+    description: "Concept DOI (all versions) — always resolves to the latest, mathematically corrected version. Cite this."
   - type: doi
     value: 10.5281/zenodo.20563975
-    description: "Version DOI (v0.1.0.dev0)"
+    description: "Version DOI (v0.1.0.dev0) — SUPERSEDED. This snapshot predates the sheaf-Laplacian PSD, persistence-dimension, and cohomology corrections; do not cite for results. Use v0.1.0.dev1 or later."
 authors:
   - family-names: Maniches
     given-names: Santiago

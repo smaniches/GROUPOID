@@ -70,5 +70,5 @@ not capture.
 
 ## Versioning
 
-This project uses `0.1.0.dev0` to indicate pre-release development.
+This project uses `0.1.0.dev1` to indicate pre-release development.
 The API is unstable and will change without notice.
