@@ -1,0 +1,29 @@
+# Dependabot configuration.
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+#
+# Opens reviewable update PRs (never auto-merged) so security and version bumps
+# are surfaced proactively, rather than relying on a manual read of the CI
+# dependency-audit output. Complements the CI dependency-vulnerability scan.
+version: 2
+updates:
+  # Python dependencies declared in pyproject.toml.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      # Batch low-risk minor/patch bumps into a single PR to limit noise; majors
+      # (which can ship breaking changes) stay as individual, separately
+      # reviewable PRs.
+      python-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions used in the workflows (keeps action versions current).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
