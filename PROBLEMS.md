@@ -16,7 +16,7 @@ test that fails on the pre-fix code.
    (fixed in PR #13, commit `0da333a`, closes #8).** The earlier construction did
    not yield a positive-semidefinite operator and its kernel did not match the
    transport-consistent agreement space. The corrected operator is
-   `L = δᵀδ` for the cellular-sheaf coboundary `δ`; it is now verified PSD and
+   `L = δ^T δ` for the cellular-sheaf coboundary `δ`; it is now verified PSD and
    verified against an *independently constructed* coboundary (the test does not
    reuse the builder's block formula), with the kernel dimension and
    transport-consistency asserted as invariants. This is the bug that motivated the
@@ -46,7 +46,7 @@ test that fails on the pre-fix code.
    (fixed in commit `21e782c`).** The parallel-transport approximation was corrected
    and tolerances tightened so the tests validate against analytic transport rather
    than passing trivially. The measured residuals are now documented honestly in
-   `LIMITATIONS.md` (see below) rather than asserted as exact.
+   `LIMITATIONS.md` (and summarized below) rather than asserted as exact.
 
 5. **Karcher-mean weights were not honored (fixed in commit `f0bfa80`).** A
    pre-public audit pass found the weighted Karcher mean ignored caller-supplied
@@ -58,7 +58,7 @@ From `LIMITATIONS.md`; recorded here so absence of a guarantee is never mistaken
 for an oversight:
 
 - **Pole ladder does not converge to zero error.** It matches geomstats' analytic
-  parallel transport closely in direction (cosine > 0.999 on a 60-degree S² hop)
+  parallel transport closely in direction (cosine > 0.999 on a 60-degree S^2 hop)
   but plateaus at a small residual (~0.02 here) and drifts slightly off the
   endpoint tangent plane as rungs increase. Schild's ladder is markedly coarser
   (cosine ~0.98 on the same hop).
@@ -70,7 +70,7 @@ for an oversight:
   component counts require a finite `max_edge_length` between the intra- and
   inter-cluster scales.
 - **Sheaf Laplacian assumes uniform stalk dimension.**
-- **H¹ uses the cycle basis of the undirected graph.** Correct for 1-dimensional
+- **H^1 uses the cycle basis of the undirected graph.** Correct for 1-dimensional
   nerve complexes; does not generalize to higher-dimensional simplicial complexes
   without modification.
 
@@ -92,13 +92,13 @@ From `STATUS.md`; stated plainly so the scope is unambiguous:
 ## Honest epistemic statement
 
 GROUPOID is a pre-alpha research prototype. Its tested mathematical primitives
-(groupoid composition, Karcher mean, H¹ cohomology, the sheaf Laplacian) are
+(groupoid composition, Karcher mean, H^1 cohomology, the sheaf Laplacian) are
 validated against independent ground truth and covered by a hard, CI-enforced 100%
 line+branch test gate; the parallel-transport and persistence modules are validated
 against analytic / known-topology references but not yet integrated into the main
 pipeline. The central scientific hypothesis — that groupoid transport + cohomological
 consistency + the intrinsic Karcher mean improve on Euclidean averaging for
-heterogeneous federated clients — is **not yet validated**, and the README and
-STATUS say so. The mathematical bugs above were caught before the corrected code was
+heterogeneous federated clients — is **not yet validated**, and `README.md` and
+`STATUS.md` say so. The mathematical bugs above were caught before the corrected code was
 archived, and each is guarded by a regression test. The repository aims to be exact
 about what has and has not been demonstrated.
