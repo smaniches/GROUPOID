@@ -14,17 +14,20 @@ This module provides:
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
+import numpy.typing as npt
 from loguru import logger
 
 
 def schild_ladder(
-    manifold,
-    tangent_vec: np.ndarray,
-    base_point: np.ndarray,
-    end_point: np.ndarray,
+    manifold: Any,  # geomstats manifold; no upstream type stubs
+    tangent_vec: npt.NDArray[np.float64],
+    base_point: npt.NDArray[np.float64],
+    end_point: npt.NDArray[np.float64],
     n_rungs: int = 1,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     """Parallel transport via Schild's ladder.
 
     An iterative approximation of parallel transport that only requires
@@ -73,17 +76,17 @@ def schild_ladder(
         current_base = next_base
         direction = metric.log(end_point, current_base)
 
-    result: np.ndarray = current_vec
+    result: npt.NDArray[np.float64] = current_vec
     return result
 
 
 def pole_ladder(
-    manifold,
-    tangent_vec: np.ndarray,
-    base_point: np.ndarray,
-    end_point: np.ndarray,
+    manifold: Any,  # geomstats manifold; no upstream type stubs
+    tangent_vec: npt.NDArray[np.float64],
+    base_point: npt.NDArray[np.float64],
+    end_point: npt.NDArray[np.float64],
     n_rungs: int = 1,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     """Parallel transport via pole ladder.
 
     A variant of Schild's ladder that uses geodesic symmetry instead
@@ -132,12 +135,12 @@ def pole_ladder(
 
 
 def compute_transport_matrix(
-    manifold,
-    base_point: np.ndarray,
-    end_point: np.ndarray,
+    manifold: Any,  # geomstats manifold; no upstream type stubs
+    base_point: npt.NDArray[np.float64],
+    end_point: npt.NDArray[np.float64],
     method: str = "pole",
     n_rungs: int = 2,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     """Compute the parallel transport matrix between two points.
 
     Constructs the full linear map T such that for any tangent vector v

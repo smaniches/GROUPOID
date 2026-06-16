@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 from loguru import logger
 
 
@@ -41,9 +42,11 @@ class RiemannianSGD:
     manifold: Any
     lr: float = 0.01
     momentum: float = 0.0
-    _velocity: np.ndarray | None = field(default=None, init=False, repr=False)
+    _velocity: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
 
-    def step(self, point: np.ndarray, euclidean_grad: np.ndarray) -> np.ndarray:
+    def step(
+        self, point: npt.NDArray[np.float64], euclidean_grad: npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.float64]:
         """Perform one optimization step.
 
         Parameters
@@ -62,7 +65,7 @@ class RiemannianSGD:
         riemannian_grad = self.manifold.to_tangent(euclidean_grad, point)
 
         # Apply momentum
-        vel: np.ndarray
+        vel: npt.NDArray[np.float64]
         if self.momentum > 0:
             if self._velocity is None:
                 vel = riemannian_grad
@@ -76,7 +79,7 @@ class RiemannianSGD:
             update = -self.lr * riemannian_grad
 
         # Retract to manifold via exponential map
-        new_point: np.ndarray = self.manifold.metric.exp(update, point)
+        new_point: npt.NDArray[np.float64] = self.manifold.metric.exp(update, point)
 
         return new_point
 
@@ -108,11 +111,13 @@ class RiemannianAdam:
     beta1: float = 0.9
     beta2: float = 0.999
     eps: float = 1e-8
-    _m: np.ndarray | None = field(default=None, init=False, repr=False)
+    _m: npt.NDArray[np.float64] | None = field(default=None, init=False, repr=False)
     _v: float = field(default=0.0, init=False, repr=False)
     _t: int = field(default=0, init=False, repr=False)
 
-    def step(self, point: np.ndarray, euclidean_grad: np.ndarray) -> np.ndarray:
+    def step(
+        self, point: npt.NDArray[np.float64], euclidean_grad: npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.float64]:
         """Perform one optimization step.
 
         Parameters
@@ -134,7 +139,7 @@ class RiemannianAdam:
         grad_norm_sq = float(np.sum(grad**2))
 
         # Update biased first moment (tangent vector)
-        first_moment: np.ndarray
+        first_moment: npt.NDArray[np.float64]
         if self._m is None:
             first_moment = grad.copy()
         else:
@@ -154,15 +159,15 @@ class RiemannianAdam:
         update = -self.lr * m_hat / (np.sqrt(v_hat) + self.eps)
         update = self.manifold.to_tangent(update, point)
 
-        new_point: np.ndarray = self.manifold.metric.exp(update, point)
+        new_point: npt.NDArray[np.float64] = self.manifold.metric.exp(update, point)
         return new_point
 
 
 def curvature_adaptive_lr(
-    manifold,
-    point: np.ndarray,
+    manifold: Any,  # geomstats manifold; no upstream type stubs
+    point: npt.NDArray[np.float64],
     base_lr: float,
-    tangent_vec: np.ndarray,
+    tangent_vec: npt.NDArray[np.float64],
 ) -> float:
     """Adapt learning rate based on local sectional curvature.
 

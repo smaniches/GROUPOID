@@ -16,6 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
+import numpy.typing as npt
 from loguru import logger
 
 
@@ -36,10 +37,10 @@ class PersistenceSummary:
     betti_1: int
     total_persistence: float
     max_persistence: float
-    diagram: np.ndarray
+    diagram: npt.NDArray[np.float64]
     bottleneck_to_previous: float | None = None
 
-    def diagram_for_dim(self, dim: int, *, finite_only: bool = False) -> np.ndarray:
+    def diagram_for_dim(self, dim: int, *, finite_only: bool = False) -> npt.NDArray[np.float64]:
         """Return the ``(birth, death)`` bars of a single homology dimension.
 
         Parameters
@@ -71,7 +72,7 @@ class PersistenceSummary:
 
 
 def compute_persistence(
-    points: np.ndarray,
+    points: npt.NDArray[np.float64],
     max_dim: int = 1,
     max_edge_length: float = np.inf,
 ) -> PersistenceSummary:
@@ -145,7 +146,7 @@ def compute_persistence(
 
 
 def track_divergence(
-    current_params: np.ndarray,
+    current_params: npt.NDArray[np.float64],
     previous_summary: PersistenceSummary | None = None,
     max_dim: int = 1,
 ) -> PersistenceSummary:

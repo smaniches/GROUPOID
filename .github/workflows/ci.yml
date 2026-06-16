@@ -20,13 +20,19 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff black mypy
+          # Install the project so `mypy --strict` type-checks against the real
+          # numpy / pydantic stubs (NDArray dtype args, the BaseModel base class).
+          # Linting only against `ruff black mypy` left numpy/pydantic uninstalled,
+          # so --strict raised disallow_subclassing_any on the BaseModel subclass.
+          # Consistent with the test / security / docs jobs. CPU torch keeps it lean.
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[dev]"
       - name: Run ruff
         run: ruff check .
       - name: Run black check
         run: black --check .
-      - name: Run mypy
-        run: mypy groupoid/ --ignore-missing-imports
+      - name: Run mypy (strict)
+        run: mypy --strict groupoid/ --ignore-missing-imports
 
   test:
     runs-on: ubuntu-latest

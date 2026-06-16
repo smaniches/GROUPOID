@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+import numpy.typing as npt
 from loguru import logger
 from pydantic import BaseModel, ConfigDict
 
@@ -18,7 +19,7 @@ class Morphism(BaseModel):
 
     source: str
     target: str
-    transport_map: np.ndarray
+    transport_map: npt.NDArray[np.float64]
 
     def __repr__(self) -> str:
         return f"Morphism({self.source} -> {self.target})"
