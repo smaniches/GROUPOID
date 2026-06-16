@@ -1,0 +1,107 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]*"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Existing tag/ref to build and publish to PyPI (e.g. v0.1.0.dev1). PyPI only — does NOT create a GitHub Release or Zenodo deposit. Leave blank for a normal tag-triggered release."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write       # provenance OIDC
+      attestations: write   # actions/attest-build-provenance + attest-sbom
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install build tooling
+        run: |
+          python -m pip install --upgrade pip build
+          pip install cyclonedx-bom
+      - name: Build sdist + wheel
+        run: python -m build
+      - name: Generate CycloneDX SBOM
+        run: cyclonedx-py requirements -o sbom.cdx.json <(pip freeze)
+      - name: Provenance attestation (dist)
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32  # v4.1.0
+        with:
+          subject-path: "dist/*"
+      - name: SBOM attestation (CycloneDX)
+        uses: actions/attest-sbom@5026d3663739160db546203eeaffa6aa1c51a4d6  # v1
+        with:
+          subject-path: "dist/*"
+          sbom-path: "sbom.cdx.json"
+      - name: Upload artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: release-artifacts
+          path: |
+            dist/*
+            sbom.cdx.json
+
+  publish-pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write       # PyPI Trusted Publishing OIDC
+    environment:
+      name: pypi
+      url: https://pypi.org/project/groupoid/
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+        with:
+          name: release-artifacts
+          path: .
+      - name: Publish to PyPI (Trusted Publishing, OIDC)
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # release/v1
+        with:
+          packages-dir: dist
+          print-hash: true
+
+  sign-and-release:
+    needs: build
+    # Only on a real tag push — a manual workflow_dispatch (used to publish an
+    # already-released tag to PyPI) must NOT create a duplicate GitHub Release
+    # or trigger a second Zenodo deposit.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # create GitHub Release
+      id-token: write       # Sigstore signing OIDC
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+        with:
+          name: release-artifacts
+          path: .
+      - name: Sign artifacts with Sigstore
+        uses: sigstore/gh-action-sigstore-python@f514d46b907ebcd5bedc05145c03b69c1edd8b46  # v3.0.0
+        with:
+          inputs: |
+            dist/*.tar.gz
+            dist/*.whl
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
+        with:
+          generate_release_notes: true
+          files: |
+            dist/*
+            sbom.cdx.json
+            *.sigstore.json
