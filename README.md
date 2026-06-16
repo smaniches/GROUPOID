@@ -1,6 +1,7 @@
 # GROUPOID
 
 [![CI](https://github.com/smaniches/GROUPOID/actions/workflows/ci.yml/badge.svg)](https://github.com/smaniches/GROUPOID/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/groupoid.svg)](https://pypi.org/project/groupoid/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python 3.10-3.12](https://img.shields.io/badge/python-3.10--3.12-blue.svg)](https://www.python.org/downloads/)
 [![Status](https://img.shields.io/badge/status-pre--alpha-orange.svg)](#status)
@@ -122,7 +123,13 @@ Requires **Python 3.10, 3.11, or 3.12**. Python 3.13+ is not supported: the
 [LIMITATIONS.md](LIMITATIONS.md)) have no wheels there, so `pip` will refuse
 with a `Requires-Python` message rather than attempt a source build.
 
-From source (not published on PyPI):
+From PyPI:
+
+```bash
+pip install groupoid
+```
+
+From source (for development):
 
 ```bash
 git clone https://github.com/smaniches/GROUPOID.git
