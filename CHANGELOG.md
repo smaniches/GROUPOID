@@ -8,10 +8,14 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-Merged on `main` but not yet part of a tagged release. The current tag
-`v0.1.0.dev0` predates the mathematical-correctness fixes below; a corrected tag
-will be cut before the next archival (Zenodo) deposit so the version DOI points at
-corrected code.
+Nothing yet.
+
+## [0.1.0.dev1] - 2026-06-16
+
+First tag cut on mathematically corrected code. The earlier `v0.1.0.dev0` tag and
+its Zenodo version DOI (`10.5281/zenodo.20563975`) predate the correctness fixes
+below and are **superseded**; that snapshot must not be cited for results. The
+concept DOI (`10.5281/zenodo.20563974`) resolves to this version.
 
 ### Fixed
 - **Sheaf (connection) Laplacian** corrected to a positive-semidefinite operator
@@ -37,6 +41,21 @@ corrected code.
 - Zenodo concept-DOI badge and `CITATION.cff` DOI metadata (#11).
 - A `Documentation` project URL and keywords aligned across `pyproject.toml`,
   `codemeta.json`, and `CITATION.cff` (#19).
+- A consolidated `PROBLEMS.md` self-audit recording corrected bugs, known
+  limitations, and deferred work (#23).
+- A `CHANGELOG.md` linked from package metadata (#24).
+- A `.zenodo.json` so archival deposits carry curated metadata, a supersession
+  note for `v0.1.0.dev0`, and version-chain links to the concept and prior DOIs.
+- Dependabot configuration for weekly `pip` and `github-actions` updates (#25).
+
+### Changed
+- Numpy array annotations parameterized to `NDArray[np.float64]`, with
+  `mypy --strict` enforced as a hard, gating CI step (#26).
+
+### Security
+- Replaced the deprecated soft `safety check` with a hard, gating `pip-audit`
+  step; the fix-less torch advisory CVE-2025-3000 is documented and explicitly
+  ignored with its rationale in `SECURITY.md` (#22).
 
 ## [0.1.0.dev0] - 2026-06-05
 
@@ -53,5 +72,6 @@ Date shown is the tag commit (`v0.1.0.dev0` -> 2a02954). `CITATION.cff` records
 `date-released: 2026-05-25`, when the core implementation landed; the tag was
 later placed on the metadata commit.
 
-[Unreleased]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev0...HEAD
+[Unreleased]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev1...HEAD
+[0.1.0.dev1]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev0...v0.1.0.dev1
 [0.1.0.dev0]: https://github.com/smaniches/GROUPOID/releases/tag/v0.1.0.dev0
