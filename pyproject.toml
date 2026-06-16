@@ -92,6 +92,7 @@ Homepage = "https://github.com/smaniches/GROUPOID"
 Repository = "https://github.com/smaniches/GROUPOID"
 Documentation = "https://smaniches.github.io/GROUPOID"
 Issues = "https://github.com/smaniches/GROUPOID/issues"
+Changelog = "https://github.com/smaniches/GROUPOID/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 include = ["groupoid*"]
