@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import networkx as nx
 import numpy as np
+import numpy.typing as npt
 from loguru import logger
 
 
@@ -21,7 +22,7 @@ class IncompleteCocycleError(Exception):
 
 def compute_h1(
     graph: nx.DiGraph,
-    transport_maps: dict[tuple[str, str], np.ndarray],
+    transport_maps: dict[tuple[str, str], npt.NDArray[np.float64]],
 ) -> float:
     """Compute the H^1 cohomology norm of a transport cocycle.
 

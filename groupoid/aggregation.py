@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 
 import networkx as nx
 import numpy as np
+import numpy.typing as npt
 from loguru import logger
 
 from groupoid.cohomology import compute_h1
@@ -43,8 +44,8 @@ class DisconnectedClientGraphError(Exception):
 class FederatedRound:
     """Result of a single federated aggregation round."""
 
-    global_params: np.ndarray
-    local_updates: dict[str, np.ndarray]
+    global_params: npt.NDArray[np.float64]
+    local_updates: dict[str, npt.NDArray[np.float64]]
     h1_norm: float
     is_consistent: bool
     transport_residuals: dict[str, float]
@@ -81,7 +82,9 @@ class TransportGroupoidAggregator:
     morphisms: dict[tuple[str, str], Morphism] = field(default_factory=dict)
     _round_idx: int = field(default=0, init=False)
 
-    def register_transport(self, source: str, target: str, matrix: np.ndarray) -> None:
+    def register_transport(
+        self, source: str, target: str, matrix: npt.NDArray[np.float64]
+    ) -> None:
         """Register a transport map between two clients."""
         self.morphisms[(source, target)] = Morphism(
             source=source,
@@ -90,7 +93,7 @@ class TransportGroupoidAggregator:
         )
         logger.debug("Registered transport {} -> {}", source, target)
 
-    def _get_transport_to_base(self, node: str) -> np.ndarray | None:
+    def _get_transport_to_base(self, node: str) -> npt.NDArray[np.float64] | None:
         """Compute the composite transport map from node to base_node.
 
         Uses shortest path in the graph and composes morphisms along it.
@@ -121,7 +124,7 @@ class TransportGroupoidAggregator:
 
         return composite.transport_map if composite is not None else None
 
-    def check_consistency(self, client_params: dict[str, np.ndarray]) -> float:
+    def check_consistency(self, client_params: dict[str, npt.NDArray[np.float64]]) -> float:
         """Check cohomological consistency of current transport maps.
 
         Returns the H^1 norm. A value near zero indicates that the
@@ -134,7 +137,7 @@ class TransportGroupoidAggregator:
 
     def aggregate(
         self,
-        client_params: dict[str, np.ndarray],
+        client_params: dict[str, npt.NDArray[np.float64]],
         weights: dict[str, float] | None = None,
     ) -> FederatedRound:
         """Run one round of groupoid-aware federated aggregation.

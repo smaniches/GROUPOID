@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+import numpy.typing as npt
 from loguru import logger
 
 # TYPE_CHECKING is always False at runtime; import is for static type checkers.
@@ -14,11 +15,11 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def karcher_mean(
     manifold: LevelSet,
-    points: np.ndarray,
-    weights: np.ndarray | None = None,
+    points: npt.NDArray[np.float64],
+    weights: npt.NDArray[np.float64] | None = None,
     max_iter: int = 100,
     tol: float = 1e-6,
-) -> np.ndarray:
+) -> npt.NDArray[np.float64]:
     """Compute the Karcher (Frechet) mean on a Riemannian manifold.
 
     Parameters
@@ -65,6 +66,6 @@ def karcher_mean(
     else:
         estimator.fit(points)
 
-    mean: np.ndarray = estimator.estimate_
+    mean: npt.NDArray[np.float64] = estimator.estimate_
     logger.debug("Karcher mean converged")
     return mean

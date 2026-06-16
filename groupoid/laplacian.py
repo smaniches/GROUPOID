@@ -18,6 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
+import numpy.typing as npt
 from loguru import logger
 
 from groupoid.sheaf import Sheaf
@@ -27,15 +28,15 @@ from groupoid.sheaf import Sheaf
 class SpectralSummary:
     """Spectral decomposition of the sheaf Laplacian."""
 
-    eigenvalues: np.ndarray
-    eigenvectors: np.ndarray
+    eigenvalues: npt.NDArray[np.float64]
+    eigenvectors: npt.NDArray[np.float64]
     spectral_gap: float
     algebraic_connectivity: float
     kernel_dimension: int
     consensus_rate: float
 
 
-def build_sheaf_laplacian(sheaf: Sheaf, stalk_dim: int) -> np.ndarray:
+def build_sheaf_laplacian(sheaf: Sheaf, stalk_dim: int) -> npt.NDArray[np.float64]:
     """Build the sheaf Laplacian matrix.
 
     For a sheaf F on graph G with n nodes and stalk dimension d,
@@ -156,10 +157,10 @@ def spectral_analysis(
 
 def sheaf_diffusion_step(
     sheaf: Sheaf,
-    sections: dict[str, np.ndarray],
+    sections: dict[str, npt.NDArray[np.float64]],
     stalk_dim: int,
     step_size: float = 0.1,
-) -> dict[str, np.ndarray]:
+) -> dict[str, npt.NDArray[np.float64]]:
     """One step of sheaf diffusion (Laplacian smoothing).
 
     Drives local sections toward global consistency by flowing along
@@ -180,7 +181,7 @@ def sheaf_diffusion_step(
 
     Returns
     -------
-    dict[str, np.ndarray]
+    dict[str, npt.NDArray[np.float64]]
         Updated section values after one diffusion step.
     """
     L = build_sheaf_laplacian(sheaf, stalk_dim)
