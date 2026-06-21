@@ -115,6 +115,27 @@ class TestOptimizerSmoke:
         assert new_point.shape == (3,)
         assert manifold.belongs(new_point, atol=1e-4)
 
+    def test_riemannian_adam_first_step_magnitude(self):
+        """The first step moves ~lr in geodesic distance, not lr/(1 - beta1).
+
+        Standard Adam's bias correction yields m_hat_1 = grad on step 1, so the
+        update is -lr * grad / (||grad|| + eps) and the geodesic displacement is
+        ~lr. Seeding the first moment as grad without the (1 - beta1) factor
+        leaves 1/(1 - beta1) uncancelled and inflates the first step to ~10*lr
+        (beta1 = 0.9). This test fails on that bug.
+        """
+        from geomstats.geometry.hypersphere import Hypersphere
+
+        from groupoid.optimizer import RiemannianAdam
+
+        manifold = Hypersphere(dim=2)
+        point = np.array([0.0, 0.0, 1.0])
+        grad = np.array([0.1, 0.2, 0.3])
+        lr = 0.01
+        new_point = RiemannianAdam(manifold=manifold, lr=lr).step(point, grad)
+        dist = float(manifold.metric.dist(point, new_point))
+        assert abs(dist - lr) < 0.2 * lr
+
 
 class TestAggregationSmoke:
     """Deterministic aggregation test."""
