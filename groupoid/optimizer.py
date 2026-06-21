@@ -138,10 +138,14 @@ class RiemannianAdam:
         grad = self.manifold.to_tangent(euclidean_grad, point)
         grad_norm_sq = float(np.sum(grad**2))
 
-        # Update biased first moment (tangent vector)
+        # Update biased first moment (tangent vector). Seed from zero like the
+        # second moment below: m_1 = (1 - beta1) * grad, so the bias correction
+        # m_hat = m_1 / (1 - beta1) recovers `grad` on the first step. Seeding
+        # m_1 = grad directly would leave the 1/(1-beta1) factor uncancelled and
+        # inflate the first update by ~10x (beta1=0.9).
         first_moment: npt.NDArray[np.float64]
         if self._m is None:
-            first_moment = grad.copy()
+            first_moment = (1 - self.beta1) * grad
         else:
             first_moment = self.manifold.to_tangent(
                 self.beta1 * self._m + (1 - self.beta1) * grad, point
