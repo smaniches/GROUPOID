@@ -1,8 +1,8 @@
 {
   "upload_type": "software",
   "title": "GROUPOID: Groupoid-based aggregation for federated learning on Riemannian manifolds",
-  "version": "0.1.0.dev1",
-  "description": "<p>Pre-alpha research prototype exploring groupoid-based aggregation for federated learning on Riemannian manifolds. Implements transport groupoid morphisms, first cohomology (H^1) for consistency detection, the cellular sheaf Laplacian for spectral analysis, parallel transport (Schild's and pole ladders), and Karcher mean aggregation via geomstats.</p><p><strong>Erratum / supersession notice:</strong> this version (v0.1.0.dev1) corrects mathematical bugs present in the earlier v0.1.0.dev0 snapshot (version DOI 10.5281/zenodo.20563975): the sheaf (connection) Laplacian is now a verified positive-semidefinite operator with a transport-consistent kernel; persistence diagrams retain the homology-dimension label so H0 and H1 are no longer conflated; and H^1 cohomology raises on incomplete cocycles instead of forming partial holonomy. The v0.1.0.dev0 version DOI must not be cited for results. Cite the concept DOI (10.5281/zenodo.20563974), which always resolves to the latest corrected version, or this version or later.</p>",
+  "version": "0.1.0.dev2",
+  "description": "<p>Pre-alpha research prototype exploring groupoid-based aggregation for federated learning on Riemannian manifolds. Implements transport groupoid morphisms, first cohomology (H^1) for consistency detection, the cellular sheaf Laplacian for spectral analysis, parallel transport (Schild's and pole ladders), and Karcher mean aggregation via geomstats.</p><p><strong>Erratum / supersession notice:</strong> this version (v0.1.0.dev2) carries the mathematical corrections introduced in v0.1.0.dev1 over the earlier v0.1.0.dev0 snapshot (version DOI 10.5281/zenodo.20563975): the sheaf (connection) Laplacian is a verified positive-semidefinite operator with a transport-consistent kernel; persistence diagrams retain the homology-dimension label so H0 and H1 are no longer conflated; and H^1 cohomology raises on incomplete cocycles instead of forming partial holonomy. It additionally corrects a first-step magnitude inflation in the RiemannianAdam optimizer's bias initialization (a component not used by the aggregation results). The v0.1.0.dev0 version DOI must not be cited for results. Cite the concept DOI (10.5281/zenodo.20563974), which always resolves to the latest corrected version, or this version or later.</p>",
   "creators": [
     {
       "name": "Maniches, Santiago",
@@ -26,7 +26,7 @@
       "scheme": "doi"
     },
     {
-      "identifier": "10.5281/zenodo.20563975",
+      "identifier": "10.5281/zenodo.20719394",
       "relation": "isNewVersionOf",
       "scheme": "doi"
     },
