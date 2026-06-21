@@ -2,8 +2,8 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 type: software
 title: "GROUPOID: Groupoid-based aggregation for federated learning on Riemannian manifolds"
-version: 0.1.0.dev1
-date-released: 2026-06-16
+version: 0.1.0.dev2
+date-released: 2026-06-21
 license: Apache-2.0
 repository-code: "https://github.com/smaniches/GROUPOID"
 doi: 10.5281/zenodo.20563974

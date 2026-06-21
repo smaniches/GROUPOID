@@ -33,7 +33,7 @@
 - No differential privacy mechanism is implemented.
 - No formal convergence analysis or proofs exist.
 - The package is published on PyPI only as an early development pre-release
-  (`groupoid 0.1.0.dev1`); no stable release exists yet.
+  (`groupoid 0.1.0.dev2`); no stable release exists yet.
 
 ## Validation status
 
@@ -71,5 +71,5 @@ not capture.
 
 ## Versioning
 
-This project uses `0.1.0.dev1` to indicate pre-release development.
+This project uses `0.1.0.dev2` to indicate pre-release development.
 The API is unstable and will change without notice.
