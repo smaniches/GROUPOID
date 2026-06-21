@@ -11,19 +11,68 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      # Pin the run to a predictable local hour. With no time/timezone,
+      # Dependabot fires at its default slot in UTC, which lands in the middle
+      # of the night for the maintainer. Adjust `timezone` to your actual IANA
+      # zone if America/New_York is not yours.
+      time: "09:00"
+      timezone: "America/New_York"
     open-pull-requests-limit: 5
+    # Manage DIRECT dependencies only — the ones declared in pyproject.toml.
+    # GROUPOID ships no committed/compiled lockfile, so this is currently a
+    # no-op (Dependabot already only edits the pyproject declarations). It is
+    # kept for consistency and as a guard: should a compiled lock ever be added,
+    # its transitive pins must advance by recompiling the lock, not by standalone
+    # Dependabot line-edits. Transitive CVEs are NOT lost: Dependabot *security*
+    # updates patch vulnerable dependencies regardless of this allow filter.
+    allow:
+      - dependency-type: "direct"
     groups:
-      # Batch low-risk minor/patch bumps into a single PR to limit noise; majors
-      # (which can ship breaking changes) stay as individual, separately
-      # reviewable PRs.
-      python-minor-and-patch:
-        update-types:
-          - "minor"
-          - "patch"
+      # Batch updates by area into a single PR per group to limit noise instead
+      # of one PR per package.
+      runtime:
+        patterns:
+          - "torch"
+          - "geomstats"
+          - "pymanopt"
+          - "ripser"
+          - "persim"
+          - "POT"
+          - "networkx"
+          - "einops"
+          - "numpy"
+          - "scipy"
+          - "pydantic"
+          - "loguru"
+      dev:
+        patterns:
+          - "pytest*"
+          - "ruff"
+          - "black"
+          - "mypy"
+          - "hypothesis"
+          - "bandit"
+          - "pip-audit"
+          - "pre-commit"
+      docs:
+        patterns: ["mkdocs*", "mkdocstrings*"]
+      # Fallback batcher. With `allow: direct` and the groups above, this should
+      # stay empty; if a future declared dep is not matched above, this keeps it
+      # to a single PR instead of one-per-package.
+      other:
+        patterns: ["*"]
 
   # GitHub Actions used in the workflows (keeps action versions current).
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
     open-pull-requests-limit: 5
+    groups:
+      # Batch all action bumps into a single weekly PR instead of one each.
+      actions:
+        patterns: ["*"]
