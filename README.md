@@ -198,3 +198,5 @@ coverage alone does not capture.
 
 Copyright 2026 TOPOLOGICA LLC. Licensed under the
 [Apache License, Version 2.0](LICENSE).
+
+<!-- codeql gate verification: safe to merge or close -->
