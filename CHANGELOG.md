@@ -10,6 +10,20 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 Nothing yet.
 
+## [0.1.0.dev2] - 2026-06-21
+
+### Fixed
+- **RiemannianAdam first-moment bias initialization**: the first moment was
+  seeded as `grad` while the zero-init bias correction `m / (1 - beta1**t)` was
+  still applied, leaving `1/(1 - beta1)` uncancelled and inflating the first
+  optimization step ~10x (beta1 = 0.9). Now seeded as `(1 - beta1) * grad` so the
+  bias correction recovers `grad`, matching standard Adam. The optimizer is not
+  integrated into the aggregation pipeline, so no published result changes (#39).
+
+### Changed
+- `STATUS.md` corrected to state the package is published on PyPI as a development
+  pre-release (`groupoid 0.1.0.dev2`) rather than "not published on PyPI" (#39).
+
 ## [0.1.0.dev1] - 2026-06-16
 
 First tag cut on mathematically corrected code. The earlier `v0.1.0.dev0` tag and
@@ -72,6 +86,7 @@ Date shown is the tag commit (`v0.1.0.dev0` -> 2a02954). `CITATION.cff` records
 `date-released: 2026-05-25`, when the core implementation landed; the tag was
 later placed on the metadata commit.
 
-[Unreleased]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev1...HEAD
+[Unreleased]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev2...HEAD
+[0.1.0.dev2]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev1...v0.1.0.dev2
 [0.1.0.dev1]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev0...v0.1.0.dev1
 [0.1.0.dev0]: https://github.com/smaniches/GROUPOID/releases/tag/v0.1.0.dev0
