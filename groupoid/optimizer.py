@@ -175,9 +175,10 @@ def curvature_adaptive_lr(
 ) -> float:
     """Adapt learning rate based on local sectional curvature.
 
-    In regions of high positive curvature, geodesics converge and
-    we should take smaller steps. In regions of negative curvature,
-    geodesics diverge and we can take larger steps.
+    In regions of high positive curvature, geodesics converge and we
+    should take smaller steps, so the base rate is damped by
+    ``1 / (1 + kappa)``. In flat or negatively curved regions the base
+    rate is returned unchanged; no enlargement is applied.
 
     Parameters
     ----------

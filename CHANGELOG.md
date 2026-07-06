@@ -8,7 +8,24 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+- **`Morphism` `str()`/`format()` output**: pydantic's `BaseModel` defines
+  `__str__` separately from `__repr__`, so `print()`, f-strings, and loguru's
+  `{}` formatting dumped the full transport matrix instead of the compact
+  `Morphism(A -> B)` form the `__repr__` override implements. `__str__` now
+  aliases `__repr__`, with a regression test (#47).
+
+### Changed
+- Docs-site installation pages corrected to state the package is published on
+  PyPI as a development pre-release, aligning `docs/index.md` and
+  `docs/quickstart.md` with the README and `STATUS.md` corrections from #37
+  and #39 (#47).
+- `curvature_adaptive_lr` docstring corrected to describe the implemented
+  behavior: the rate is damped in positive curvature and returned unchanged
+  otherwise; no enlargement is applied in negative curvature (#47).
+- `LIMITATIONS.md` now records that `torch`, `pymanopt`, `POT`, and `einops`
+  are declared runtime dependencies with no current code path (the suite
+  passes with all four uninstalled) (#47).
 
 ## [0.1.0.dev2] - 2026-06-21
 

@@ -74,7 +74,14 @@ Client C ---T_CD---> Client D
 
 ## Installation
 
-From source (not published on PyPI):
+From PyPI (published as an early development pre-release; the API is
+unstable, see [STATUS](https://github.com/smaniches/GROUPOID/blob/main/STATUS.md)):
+
+```bash
+pip install groupoid
+```
+
+From source (for development):
 
 ```bash
 git clone https://github.com/smaniches/GROUPOID.git
