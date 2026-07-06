@@ -24,6 +24,11 @@ class Morphism(BaseModel):
     def __repr__(self) -> str:
         return f"Morphism({self.source} -> {self.target})"
 
+    # pydantic's BaseModel defines __str__ separately (a field dump including
+    # the full transport matrix), which would bypass the compact __repr__ in
+    # print(), f-strings, and loguru's {} formatting. Alias it explicitly.
+    __str__ = __repr__
+
 
 class CompositionError(Exception):
     """Raised when morphism composition is not defined."""

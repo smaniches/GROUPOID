@@ -31,6 +31,18 @@ class TestMorphismRepr:
         m = Morphism(source="A", target="B", transport_map=np.eye(2))
         assert repr(m) == "Morphism(A -> B)"
 
+    def test_str_and_format_show_arrow(self):
+        """str() and format() must render the same compact arrow as repr().
+
+        pydantic's BaseModel defines __str__ separately (a field dump that
+        includes the full transport matrix), so overriding __repr__ alone
+        leaves print(), f-strings, and loguru's ``{}`` formatting dumping
+        the entire matrix instead of the intended compact form.
+        """
+        m = Morphism(source="A", target="B", transport_map=np.eye(2))
+        assert str(m) == "Morphism(A -> B)"
+        assert f"{m}" == "Morphism(A -> B)"
+
 
 class TestSheafSections:
     def test_section_round_trip(self):
