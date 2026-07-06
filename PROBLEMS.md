@@ -109,7 +109,9 @@ line+branch test gate; the parallel-transport and persistence modules are valida
 against analytic / known-topology references and are wired into the aggregation
 pipeline. The central scientific hypothesis — that groupoid transport + cohomological
 consistency + the intrinsic Karcher mean improve on Euclidean averaging for
-heterogeneous federated clients — is **not yet validated**, and `README.md` and
-`STATUS.md` say so. The mathematical bugs above were caught before the corrected code was
+heterogeneous federated clients — is supported by a preregistered synthetic
+benchmark (`experiments/`) in which the frame-misalignment benefit is largely
+built into the data-generating process, and remains **unvalidated on real
+federated learning tasks**; `README.md` and `STATUS.md` state this precisely. The mathematical bugs above were caught before the corrected code was
 archived, and each is guarded by a regression test. The repository aims to be exact
 about what has and has not been demonstrated.

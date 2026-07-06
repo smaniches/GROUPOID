@@ -115,8 +115,13 @@ idea -- transport-groupoid aggregation with cohomological consistency checking
 In short: use Flower/FedML/TFF for the FL system, use geomstats/pymanopt for
 manifold math; GROUPOID is a research prototype testing whether combining a
 transport groupoid with sheaf-cohomological consistency yields a better
-aggregation operator than Euclidean FedAvg. That hypothesis is **not yet
-validated** (see [STATUS.md](STATUS.md)).
+aggregation operator than Euclidean FedAvg. A preregistered synthetic
+benchmark ([experiments/](experiments/)) supports the transport benefit
+under frame misalignment -- an effect largely built into the synthetic
+setup -- and shows the pooled H^1 norm tracks corruption-induced error
+across corruption levels, though it does not rank runs within a level.
+The hypothesis remains **unvalidated on real federated learning tasks**
+(see [STATUS.md](STATUS.md)).
 
 ## Installation
 

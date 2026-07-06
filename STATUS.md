@@ -32,6 +32,16 @@
   exact norm preservation (tangent projection is the fallback for
   metrics without parallel transport). No general convergence-rate
   analysis exists, and it is not yet integrated into the main pipeline.
+- A preregistered synthetic benchmark (`experiments/`) tests the central
+  hypothesis: the transport benefit under frame misalignment is supported
+  in all preregistered cells (an effect largely built into the synthetic
+  setup), the ablation shows transport -- not the intrinsic mean --
+  accounts for essentially all of it, and the pooled H^1 norm tracks
+  corruption-induced error across corruption levels (Spearman rho = 0.587,
+  permutation p = 1e-4) while not ranking runs within a level. See
+  `experiments/RESULTS.md`, including the failed null check and the
+  documented deviation. The hypothesis remains unvalidated on real
+  federated learning tasks.
 - No federated training loop with real neural networks exists yet.
 - No differential privacy mechanism is implemented.
 - No formal convergence analysis or proofs exist.

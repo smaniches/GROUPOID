@@ -31,6 +31,14 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   and Adam descend to a known target on S^2; the optimizer status labels
   in STATUS.md and the docs are upgraded accordingly (general
   convergence-rate analysis still does not exist and is not claimed).
+- A preregistered synthetic benchmark (`experiments/`): preregistration
+  pushed before execution, 600 seeded runs, 2x2 transport/mean ablation
+  against an oracle estimand, corrupted-cocycle conditions, and a
+  committed preregistered analysis (`experiments/RESULTS.md`). Supports
+  the transport benefit under frame misalignment (largely by
+  construction) and the pooled H^1-error correlation under corruption,
+  with the within-level caveat, a failed null check reported as failed,
+  and one documented seeding deviation.
 
 ## [0.1.0.dev3] - 2026-07-06
 
