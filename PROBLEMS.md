@@ -52,6 +52,17 @@ test that fails on the pre-fix code.
    pre-public audit pass found the weighted Karcher mean ignored caller-supplied
    weights; it now honors them, with a dead import removed and docs corrected.
 
+6. **Optimizer moment accumulators were carried across iterates by tangent
+   projection, not parallel transport (fixed in commit `5371c20`).** Adam's first
+   moment was projected onto each new tangent space and the SGD momentum velocity
+   was not moved at all. Projection loses the component normal to the new tangent
+   space — a geodesic-aligned moment can be annihilated outright — and an
+   untransported moment is not even tangent at the new iterate. Both accumulators
+   are now parallel-transported (the Becigneul–Ganea construction), with tangent
+   projection kept only as a fallback for metrics lacking parallel transport. The
+   regression tests discriminate transport from projection by exact norm
+   preservation at a point where projection would give zero.
+
 ## Known mathematical limitations (not bugs — documented honestly)
 
 From `LIMITATIONS.md`; recorded here so absence of a guarantee is never mistaken
@@ -83,9 +94,9 @@ From `STATUS.md`; stated plainly so the scope is unambiguous:
   optional dependencies for future work but are integrated into no code path).
 - No formal convergence analysis or proofs exist for the groupoid aggregation
   method.
-- The Riemannian optimizers are **smoke-tested only**: their steps stay on the
-  manifold and the curvature-adaptive learning rate behaves sensibly, but core
-  descent/convergence behavior is not validated, and the module is not yet
+- The Riemannian optimizers are validated for **descent to a known target on
+  S^2** (SGD, momentum SGD, Adam) with parallel-transported moment accumulators,
+  but no general convergence-rate analysis exists and the module is not yet
   integrated into the aggregation pipeline. (100% line+branch coverage is not the
   same as validation — see `STATUS.md`.)
 
@@ -95,7 +106,7 @@ GROUPOID is a pre-alpha research prototype. Its tested mathematical primitives
 (groupoid composition, Karcher mean, H^1 cohomology, the sheaf Laplacian) are
 validated against independent ground truth and covered by a hard, CI-enforced 100%
 line+branch test gate; the parallel-transport and persistence modules are validated
-against analytic / known-topology references but not yet integrated into the main
+against analytic / known-topology references and are wired into the aggregation
 pipeline. The central scientific hypothesis — that groupoid transport + cohomological
 consistency + the intrinsic Karcher mean improve on Euclidean averaging for
 heterogeneous federated clients — is **not yet validated**, and `README.md` and

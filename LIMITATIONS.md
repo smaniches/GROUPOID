@@ -75,11 +75,13 @@ system. The following limitations apply.
   defensive guards and a `TYPE_CHECKING` import are excluded via
   `# pragma: no cover` with justifications.
 - Coverage is not validation. The transport and persistence modules are
-  now validated against ground truth (analytic parallel transport;
-  known-topology point clouds) but remain unintegrated into the pipeline.
-  The optimizer module has smoke-test coverage only: its steps stay on
-  the manifold and the curvature-adaptive learning rate behaves sensibly,
-  but its core descent/convergence behavior is not validated.
+  validated against ground truth (analytic parallel transport;
+  known-topology point clouds) and are wired into the aggregation
+  pipeline (`register_transport_from_points`; the opt-in
+  `track_divergence` flag). The optimizer module is validated for
+  descent to a known target on S^2 and for parallel-transported moment
+  accumulators, but it has no general convergence-rate analysis and is
+  not integrated into the pipeline.
 - No end-to-end test with real neural network training exists.
 - Property-based tests use 500 examples per property, which provides
   reasonable but not exhaustive coverage of edge cases.

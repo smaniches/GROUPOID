@@ -13,8 +13,8 @@
 - The parallel-transport module is validated against ground truth: the
   pole ladder matches geomstats' analytic parallel transport in direction
   (cosine > 0.999) and magnitude on S^2; Schild's ladder is a coarser
-  first-order approximation. It is not yet integrated into the main
-  pipeline.
+  first-order approximation. It is wired into the aggregation pipeline
+  via `TransportGroupoidAggregator.register_transport_from_points`.
 - The persistence module is unit-tested against point clouds of known
   topology (a circle's dominant 1-cycle, two-cluster component counting,
   translation-invariant bottleneck distance). The persistence diagram
@@ -22,13 +22,16 @@
   against H0 only; this is verified against an independent
   minimum-spanning-tree reconstruction of the H0 diagram (the finite H0
   death times equal the MST edge weights), and an H1-only change is shown
-  not to leak into the H0 divergence. It is not yet integrated into the
-  main pipeline. See the Betti-degeneracy caveat in LIMITATIONS.md.
-- The optimizer module has smoke-test coverage only (Riemannian SGD/Adam
-  steps stay on the manifold; curvature-adaptive learning rate damps in
-  positive curvature and falls back gracefully). Its core descent and
-  convergence behavior is not validated, and it is not yet integrated
-  into the main pipeline.
+  not to leak into the H0 divergence. It is wired into the aggregation
+  pipeline via the aggregator's opt-in `track_divergence` flag. See the
+  Betti-degeneracy caveat in LIMITATIONS.md.
+- The optimizer module is validated against known-correct references:
+  Riemannian SGD (with and without momentum) and Adam descend to a known
+  target on S^2 (geodesic-distance objective), and the momentum/first-
+  moment accumulators are parallel-transported between iterates with
+  exact norm preservation (tangent projection is the fallback for
+  metrics without parallel transport). No general convergence-rate
+  analysis exists, and it is not yet integrated into the main pipeline.
 - No federated training loop with real neural networks exists yet.
 - No differential privacy mechanism is implemented.
 - No formal convergence analysis or proofs exist.
@@ -45,9 +48,9 @@
 | Sheaf restriction maps | Tested | Hypothesis: functoriality verified (500 examples) |
 | Sheaf Laplacian | Tested | Unit: delta^T-delta equality, PSD, kernel content on non-orthogonal maps; Integration: spectral analysis, diffusion convergence |
 | Aggregation pipeline | Tested | Integration: multi-round convergence on S^2, consistency check |
-| Parallel transport | Tested (not integrated) | Unit: pole ladder matches geomstats analytic parallel transport in direction (cosine > 0.999) and magnitude on S^2; Schild's ladder asserted as a coarser approximation; transport-matrix constructor is norm-preserving |
-| Riemannian optimizers | Smoke-tested | Smoke: SGD and Adam steps stay on S^2; curvature-adaptive LR damps in positive curvature and falls back without curvature. Core descent/convergence not validated |
-| Persistent homology | Tested (not integrated) | Unit: circle's dominant 1-cycle via max persistence; two-cluster component count (betti_0 = 2) at a finite filtration; translation-invariant bottleneck distance. Dimension-aware: diagram retains an H0/H1 label, `track_divergence` compares H0-vs-H0 only, verified against an independent MST reconstruction of the H0 diagram and shown to not leak an H1-only change into the H0 divergence. Betti degeneracy at thresh=inf documented in LIMITATIONS.md |
+| Parallel transport | Tested, integrated | Unit: pole ladder matches geomstats analytic parallel transport in direction (cosine > 0.999) and magnitude on S^2; Schild's ladder asserted as a coarser approximation; transport-matrix constructor is norm-preserving. Integration: `register_transport_from_points` validated against analytic transport and end-to-end through `aggregate()` |
+| Riemannian optimizers | Tested (not integrated) | Unit: SGD, momentum SGD, and Adam descend to a known target on S^2 (final geodesic distance < 1e-6 / 1e-3 from a 60-degree start); moment accumulators parallel-transported between iterates with exact norm preservation where projection would annihilate them (both fallback branches covered); curvature-adaptive LR damps in positive curvature and falls back without curvature. No general convergence-rate analysis |
+| Persistent homology | Tested, integrated | Unit: circle's dominant 1-cycle via max persistence; two-cluster component count (betti_0 = 2) at a finite filtration; translation-invariant bottleneck distance. Dimension-aware: diagram retains an H0/H1 label, `track_divergence` compares H0-vs-H0 only, verified against an independent MST reconstruction of the H0 diagram and shown to not leak an H1-only change into the H0 divergence. Integration: opt-in `track_divergence` flag on the aggregator (zero bottleneck on identical rounds, positive on a client jump). Betti degeneracy at thresh=inf documented in LIMITATIONS.md |
 | Differential privacy | Not implemented | Listed as dependency only |
 | Real FL training | Not implemented | |
 | Convergence proofs | Not available | |

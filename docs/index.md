@@ -24,19 +24,14 @@ irreconcilable model divergence before it degrades performance.
 | `groupoid.sheaf` | Cellular sheaf, restriction maps | Hypothesis (500 examples) |
 | `groupoid.laplacian` | Sheaf Laplacian, spectral analysis, diffusion | Unit: PSD + delta^T-delta equality on non-orthogonal maps, transport-consistent kernel; Integration: spectral analysis, diffusion |
 | `groupoid.aggregation` | Transport-aware federated aggregation pipeline | Integration tests |
+| `groupoid.transport` | Schild's ladder, pole ladder parallel transport; wired into the pipeline via `register_transport_from_points` | Unit: pole ladder matches geomstats analytic parallel transport in direction (cosine > 0.999) and magnitude on S^2; Schild's ladder asserted as a coarser approximation. Integration: computed transports validated against analytic transport and end-to-end through `aggregate()` |
+| `groupoid.persistence` | Vietoris-Rips persistent homology; wired into the pipeline via the aggregator's opt-in `track_divergence` flag | Unit: circle 1-cycle via max persistence, two-cluster component count at a finite filtration, translation-invariant bottleneck. Dimension-aware: diagram retains an H0/H1 label and `track_divergence` compares H0-vs-H0 only, verified against an independent MST reconstruction of the H0 diagram and shown not to leak an H1-only change into the H0 divergence. Integration: zero bottleneck on identical rounds, positive on a client jump. Betti degeneracy at thresh=inf documented in LIMITATIONS |
 
-## Implemented, validated against ground truth, not yet integrated
-
-| Module | Description | Test coverage |
-|---|---|---|
-| `groupoid.transport` | Schild's ladder, pole ladder parallel transport | Unit: pole ladder matches geomstats analytic parallel transport in direction (cosine > 0.999) and magnitude on S^2; Schild's ladder asserted as a coarser approximation |
-| `groupoid.persistence` | Vietoris-Rips persistent homology | Unit: circle 1-cycle via max persistence, two-cluster component count at a finite filtration, translation-invariant bottleneck. Dimension-aware: diagram retains an H0/H1 label and `track_divergence` compares H0-vs-H0 only, verified against an independent MST reconstruction of the H0 diagram and shown not to leak an H1-only change into the H0 divergence. Betti degeneracy at thresh=inf documented in LIMITATIONS |
-
-## Implemented, smoke-tested, not yet integrated
+## Implemented and validated, not yet integrated
 
 | Module | Description | Test coverage |
 |---|---|---|
-| `groupoid.optimizer` | Riemannian SGD, Adam, curvature-adaptive LR | Smoke: step stays on S^2; curvature-adaptive LR damps/falls back. Core descent/convergence not validated |
+| `groupoid.optimizer` | Riemannian SGD, Adam (moments parallel-transported between iterates), curvature-adaptive LR | Unit: SGD, momentum SGD, and Adam descend to a known target on S^2; transported moments preserve norm exactly where projection would annihilate them; curvature-adaptive LR damps/falls back. No general convergence-rate analysis |
 
 ## Not yet implemented
 
