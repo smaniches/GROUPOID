@@ -8,6 +8,17 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.1.0.dev4] - 2026-07-06
+
+`v0.1.0.dev3` was cut in source control (below) but never tagged or
+released: no `v0.1.0.dev3` tag was ever pushed, so PyPI, the GitHub
+Release, and the Zenodo deposit all skip directly from `0.1.0.dev2` to
+this version, which carries both the `0.1.0.dev3` changes and the ones
+below. See the "Releasing" section of `CONTRIBUTING.md` for the
+automation added in this version that prevents this gap from recurring.
+
 ### Fixed
 - **Optimizer moment accumulators are now parallel-transported between
   iterates**: Adam's first moment was previously carried across steps by
@@ -16,21 +27,23 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   at the new iterate). Both now use the metric's parallel transport (the
   Becigneul-Ganea construction), with projection kept as the fallback for
   metrics without parallel transport. Regression tests discriminate
-  transport from projection by exact norm preservation.
+  transport from projection by exact norm preservation (#49).
 
 ### Added
 - `TransportGroupoidAggregator.register_transport_from_points`: computes
   and registers the transport matrix from two client base points via the
-  pole or Schild ladder, wiring `groupoid.transport` into the pipeline.
+  pole or Schild ladder, wiring `groupoid.transport` into the pipeline
+  (#49).
 - Opt-in `track_divergence` flag on the aggregator: each round computes
   the persistent-homology summary of the transported parameters with the
   H0-vs-H0 bottleneck distance to the previous round, exposed as
   `FederatedRound.divergence` (default off; existing behavior unchanged),
-  wiring `groupoid.persistence` into the pipeline.
+  wiring `groupoid.persistence` into the pipeline (#49).
 - Descent validation for the Riemannian optimizers: SGD, momentum SGD,
   and Adam descend to a known target on S^2; the optimizer status labels
   in STATUS.md and the docs are upgraded accordingly (general
-  convergence-rate analysis still does not exist and is not claimed).
+  convergence-rate analysis still does not exist and is not claimed)
+  (#49).
 - A preregistered synthetic benchmark (`experiments/`): preregistration
   pushed before execution, 600 seeded runs, 2x2 transport/mean ablation
   against an oracle estimand, corrupted-cocycle conditions, and a
@@ -38,9 +51,13 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   the transport benefit under frame misalignment (largely by
   construction) and the pooled H^1-error correlation under corruption,
   with the within-level caveat, a failed null check reported as failed,
-  and one documented seeding deviation.
+  and one documented seeding deviation (#49).
+- Release automation: pushing a version bump to `main` now tags and
+  releases automatically, removing the manual tag-push step.
 
 ## [0.1.0.dev3] - 2026-07-06
+
+Cut in source control but never tagged or released; see `0.1.0.dev4` above.
 
 ### Fixed
 - **`Morphism` `str()`/`format()` output**: pydantic's `BaseModel` defines
@@ -137,8 +154,9 @@ Date shown is the tag commit (`v0.1.0.dev0` -> 2a02954). `CITATION.cff` records
 `date-released: 2026-05-25`, when the core implementation landed; the tag was
 later placed on the metadata commit.
 
-[Unreleased]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev3...HEAD
-[0.1.0.dev3]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev2...v0.1.0.dev3
+[Unreleased]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev4...HEAD
+[0.1.0.dev4]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev2...v0.1.0.dev4
+[0.1.0.dev3]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev2...af42cb4
 [0.1.0.dev2]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev1...v0.1.0.dev2
 [0.1.0.dev1]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev0...v0.1.0.dev1
 [0.1.0.dev0]: https://github.com/smaniches/GROUPOID/releases/tag/v0.1.0.dev0
