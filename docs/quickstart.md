@@ -2,9 +2,22 @@
 
 ## Installation
 
-### From source (development)
-
 Requires Python 3.10, 3.11, or 3.12 (not 3.13+; see the note below).
+
+### From PyPI
+
+```bash
+pip install groupoid
+```
+
+!!! note
+
+    GROUPOID is published on PyPI only as an early development pre-release
+    (`0.1.0.dev` series). The API is unstable and will change without
+    notice; see
+    [STATUS](https://github.com/smaniches/GROUPOID/blob/main/STATUS.md).
+
+### From source (development)
 
 ```bash
 git clone https://github.com/smaniches/GROUPOID.git
@@ -12,10 +25,6 @@ cd GROUPOID
 pip install -e ".[dev]"
 pre-commit install
 ```
-
-!!! note
-
-    GROUPOID is not published on PyPI. Install from source as shown above.
 
 !!! note "Python version"
 
