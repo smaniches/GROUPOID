@@ -44,21 +44,20 @@ integration tests:
 - **Federated aggregation pipeline**: transport-aware aggregation with
   H^1 consistency checking, multi-round convergence tested
   (`groupoid.aggregation`)
-
-## Implemented, validated against ground truth, not yet integrated
-
-These modules have unit tests that validate behavior against a
-known-correct reference, but are not yet wired into the main aggregation
-pipeline:
-
 - **Parallel transport**: Schild's ladder and pole ladder
-  (`groupoid.transport`). The pole ladder is validated against geomstats'
-  analytic parallel transport on S^2 -- it matches in direction
-  (cosine > 0.999) and magnitude. Schild's ladder is a coarser
-  first-order approximation and is asserted as such. See
-  [LIMITATIONS.md](LIMITATIONS.md) for the convergence caveat.
+  (`groupoid.transport`), wired into the pipeline via
+  `TransportGroupoidAggregator.register_transport_from_points` (computes
+  and registers the transport matrix from two client base points). The
+  pole ladder is validated against geomstats' analytic parallel transport
+  on S^2 -- it matches in direction (cosine > 0.999) and magnitude.
+  Schild's ladder is a coarser first-order approximation and is asserted
+  as such. See [LIMITATIONS.md](LIMITATIONS.md) for the convergence
+  caveat.
 - **Persistent homology**: Vietoris-Rips filtration for divergence
-  tracking (`groupoid.persistence`). Unit-tested against point clouds of
+  tracking (`groupoid.persistence`), wired into the pipeline via the
+  aggregator's opt-in `track_divergence` flag (per-round H0-vs-H0
+  bottleneck distance on the transported parameters, exposed as
+  `FederatedRound.divergence`). Unit-tested against point clouds of
   known topology: a circle's dominant 1-cycle (via maximum persistence),
   two-cluster component counting (`betti_0 == 2` at a finite filtration),
   and a translation-invariant bottleneck distance. The persistence diagram
@@ -68,17 +67,20 @@ pipeline:
   the H0 diagram. The Betti numbers are degenerate under the default
   `thresh=inf` filtration; see [LIMITATIONS.md](LIMITATIONS.md).
 
-## Implemented, smoke-tested, not yet integrated
+## Implemented and validated, not yet integrated
 
-This module has implementation with smoke-test coverage only -- the tests
-check coarse sanity (steps stay on the manifold), not core correctness --
-and it is not yet wired into the main aggregation pipeline:
+This module is validated against known-correct references but not yet
+wired into the main aggregation pipeline:
 
 - **Riemannian optimizers**: SGD and Adam with exponential map
-  retraction; smoke-tested to stay on the manifold after a step, with the
-  curvature-adaptive learning rate covered for both its damping and
-  fallback branches. Core descent/convergence behavior is not validated
-  (`groupoid.optimizer`)
+  retraction; the momentum velocity and Adam first moment are
+  parallel-transported between iterates (with a projection fallback for
+  metrics without parallel transport). Validated: descent to a known
+  target on S^2 (geodesic-distance objective) for SGD, momentum SGD, and
+  Adam; transported moments preserve norm exactly where projection would
+  annihilate them; the curvature-adaptive learning rate is covered for
+  both its damping and fallback branches. No general convergence-rate
+  guarantees are established (`groupoid.optimizer`)
 
 ## Status
 
@@ -113,8 +115,13 @@ idea -- transport-groupoid aggregation with cohomological consistency checking
 In short: use Flower/FedML/TFF for the FL system, use geomstats/pymanopt for
 manifold math; GROUPOID is a research prototype testing whether combining a
 transport groupoid with sheaf-cohomological consistency yields a better
-aggregation operator than Euclidean FedAvg. That hypothesis is **not yet
-validated** (see [STATUS.md](STATUS.md)).
+aggregation operator than Euclidean FedAvg. A preregistered synthetic
+benchmark ([experiments/](experiments/)) supports the transport benefit
+under frame misalignment -- an effect largely built into the synthetic
+setup -- and shows the pooled H^1 norm tracks corruption-induced error
+across corruption levels, though it does not rank runs within a level.
+The hypothesis remains **unvalidated on real federated learning tasks**
+(see [STATUS.md](STATUS.md)).
 
 ## Installation
 

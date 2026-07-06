@@ -8,7 +8,37 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+- **Optimizer moment accumulators are now parallel-transported between
+  iterates**: Adam's first moment was previously carried across steps by
+  tangent projection (which can annihilate a geodesic-aligned moment) and
+  the SGD momentum velocity was not moved at all (leaving it non-tangent
+  at the new iterate). Both now use the metric's parallel transport (the
+  Becigneul-Ganea construction), with projection kept as the fallback for
+  metrics without parallel transport. Regression tests discriminate
+  transport from projection by exact norm preservation.
+
+### Added
+- `TransportGroupoidAggregator.register_transport_from_points`: computes
+  and registers the transport matrix from two client base points via the
+  pole or Schild ladder, wiring `groupoid.transport` into the pipeline.
+- Opt-in `track_divergence` flag on the aggregator: each round computes
+  the persistent-homology summary of the transported parameters with the
+  H0-vs-H0 bottleneck distance to the previous round, exposed as
+  `FederatedRound.divergence` (default off; existing behavior unchanged),
+  wiring `groupoid.persistence` into the pipeline.
+- Descent validation for the Riemannian optimizers: SGD, momentum SGD,
+  and Adam descend to a known target on S^2; the optimizer status labels
+  in STATUS.md and the docs are upgraded accordingly (general
+  convergence-rate analysis still does not exist and is not claimed).
+- A preregistered synthetic benchmark (`experiments/`): preregistration
+  pushed before execution, 600 seeded runs, 2x2 transport/mean ablation
+  against an oracle estimand, corrupted-cocycle conditions, and a
+  committed preregistered analysis (`experiments/RESULTS.md`). Supports
+  the transport benefit under frame misalignment (largely by
+  construction) and the pooled H^1-error correlation under corruption,
+  with the within-level caveat, a failed null check reported as failed,
+  and one documented seeding deviation.
 
 ## [0.1.0.dev3] - 2026-07-06
 

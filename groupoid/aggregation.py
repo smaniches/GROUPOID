@@ -23,9 +23,11 @@ import numpy as np
 import numpy.typing as npt
 from loguru import logger
 
+from groupoid import persistence as _persistence
 from groupoid.cohomology import compute_h1
 from groupoid.groupoid import Morphism, compose, inverse
 from groupoid.manifold import karcher_mean
+from groupoid.transport import compute_transport_matrix
 
 
 class DisconnectedClientGraphError(Exception):
@@ -42,7 +44,14 @@ class DisconnectedClientGraphError(Exception):
 
 @dataclass
 class FederatedRound:
-    """Result of a single federated aggregation round."""
+    """Result of a single federated aggregation round.
+
+    ``divergence`` is populated only when the aggregator was constructed
+    with ``track_divergence=True``: it is the persistent-homology summary
+    of the transported client parameters, with the bottleneck distance to
+    the previous round's summary (None on the first round with tracking
+    off; see :func:`groupoid.persistence.track_divergence`).
+    """
 
     global_params: npt.NDArray[np.float64]
     local_updates: dict[str, npt.NDArray[np.float64]]
@@ -50,6 +59,7 @@ class FederatedRound:
     is_consistent: bool
     transport_residuals: dict[str, float]
     round_idx: int = 0
+    divergence: _persistence.PersistenceSummary | None = None
 
 
 @dataclass
@@ -73,14 +83,23 @@ class TransportGroupoidAggregator:
         The node to which all parameters are transported for aggregation.
     consistency_threshold
         Maximum H^1 norm before raising a consistency warning.
+    track_divergence
+        When True, each :meth:`aggregate` round computes the persistent
+        homology of the transported client parameters and the bottleneck
+        distance to the previous round (H0 against H0), populating
+        ``FederatedRound.divergence``.
     """
 
     manifold: object
     graph: nx.DiGraph
     base_node: str
     consistency_threshold: float = 1e-6
+    track_divergence: bool = False
     morphisms: dict[tuple[str, str], Morphism] = field(default_factory=dict)
     _round_idx: int = field(default=0, init=False)
+    _prev_divergence: _persistence.PersistenceSummary | None = field(
+        default=None, init=False, repr=False
+    )
 
     def register_transport(
         self, source: str, target: str, matrix: npt.NDArray[np.float64]
@@ -92,6 +111,42 @@ class TransportGroupoidAggregator:
             transport_map=matrix,
         )
         logger.debug("Registered transport {} -> {}", source, target)
+
+    def register_transport_from_points(
+        self,
+        source: str,
+        target: str,
+        source_point: npt.NDArray[np.float64],
+        target_point: npt.NDArray[np.float64],
+        method: str = "pole",
+        n_rungs: int = 2,
+    ) -> npt.NDArray[np.float64]:
+        """Compute and register a transport map from two manifold points.
+
+        Builds the parallel-transport matrix along the geodesic from
+        ``source_point`` to ``target_point`` via
+        :func:`groupoid.transport.compute_transport_matrix` (pole or
+        Schild's ladder) and registers it for the ``(source, target)``
+        edge. This wires the ladder approximations into the aggregation
+        pipeline for the case where per-client base points are known but
+        explicit transport matrices are not. The ladders are
+        approximations with a small residual; see LIMITATIONS.md for the
+        measured behavior.
+
+        Returns
+        -------
+        np.ndarray
+            The registered transport matrix.
+        """
+        matrix = compute_transport_matrix(
+            self.manifold,
+            source_point,
+            target_point,
+            method=method,
+            n_rungs=n_rungs,
+        )
+        self.register_transport(source, target, matrix)
+        return matrix
 
     def _get_transport_to_base(self, node: str) -> npt.NDArray[np.float64] | None:
         """Compute the composite transport map from node to base_node.
@@ -194,6 +249,15 @@ class TransportGroupoidAggregator:
         nodes = sorted(transported.keys())
         param_stack = np.stack([transported[n] for n in nodes])
 
+        # Optional topological divergence tracking on the transported
+        # parameters (all in the base frame, so rounds are comparable).
+        divergence: _persistence.PersistenceSummary | None = None
+        if self.track_divergence:
+            divergence = _persistence.track_divergence(
+                param_stack, previous_summary=self._prev_divergence
+            )
+            self._prev_divergence = divergence
+
         if weights is not None:
             w = np.array([weights.get(n, 1.0) for n in nodes])
             w = w / w.sum()
@@ -223,6 +287,7 @@ class TransportGroupoidAggregator:
             is_consistent=is_consistent,
             transport_residuals=transport_residuals,
             round_idx=self._round_idx,
+            divergence=divergence,
         )
 
         logger.info(
