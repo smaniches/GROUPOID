@@ -75,6 +75,45 @@ please open an issue using the "Mathematical Correction" template.
 6. Ensure CI passes (lint, test, security, docs build).
 7. Address all review comments before merging.
 
+## Releasing
+
+1. Open a release-cut PR that bumps the version across every metadata
+   file that carries it: `pyproject.toml`, `groupoid/__init__.py`,
+   `codemeta.json`, `CITATION.cff` (version and `date-released`),
+   `STATUS.md` (both mentions), and `.zenodo.json` (version, the erratum
+   description, and `isNewVersionOf` advanced to the prior version's
+   Zenodo DOI). Roll `CHANGELOG.md`'s `Unreleased` section into a new
+   version heading with compare links. See PRs #40 or #48 for the
+   template.
+2. Merge the PR to `main`.
+
+That's it — merging is the release trigger, split across two workflows
+with one job each so the actual publish path has exactly one trigger to
+reason about:
+
+- `.github/workflows/auto-tag-release.yml` runs on every push to `main`
+  that touches `pyproject.toml`. It reads the version out of
+  `pyproject.toml`, and if no `v<version>` tag exists yet, it creates and
+  pushes one (as `github-actions[bot]`) after checking the version has a
+  recognized format and that `CHANGELOG.md` documents it. A push with no
+  version change, or whose tag already exists, is a no-op.
+- That tag push triggers `.github/workflows/release.yml` exactly as a
+  manual `git tag vX.Y.Z && git push origin vX.Y.Z` would: build,
+  provenance and SBOM attestation, publish to PyPI via Trusted
+  Publishing, Sigstore signing, and a GitHub Release (which in turn
+  triggers the Zenodo deposit for the new version DOI). `release.yml`
+  itself is unchanged from before this automation existed — it only
+  ever runs from a tag push or a manual `workflow_dispatch`.
+
+The actual PyPI publish step still runs under the `pypi` GitHub
+Environment; if that environment has required reviewers configured, the
+publish waits for that approval exactly as before. Automating the tag
+does not remove that gate.
+
+If you need to re-publish an existing tag to PyPI only (no new GitHub
+Release, no new Zenodo deposit), use the `workflow_dispatch` trigger on
+`release.yml` with the `ref` input set to the existing tag.
+
 ## Issue Templates
 
 When reporting bugs or requesting features, please use the appropriate
