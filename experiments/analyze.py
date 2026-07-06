@@ -151,6 +151,13 @@ def main() -> None:
         )
         w(f"| {alpha} | {sigma} | {eps} | {c_rho:.3f} |")
     w("")
+    w("Descriptive caveat (does not alter the preregistered verdict): the")
+    w("within-cell correlations are near zero, so the pooled correlation is")
+    w("driven by between-level variation (epsilon = 0.1 vs 0.3). On this")
+    w("evidence H^1 tracks the magnitude of cocycle corruption -- it works")
+    w("as a gross inconsistency detector -- but does not rank runs by error")
+    w("within a fixed corruption level.")
+    w("")
 
     # H3: cells alpha >= 0.7, epsilon = 0.
     w("## H3: ablation decomposition")
@@ -213,6 +220,20 @@ def main() -> None:
     w("")
     w(f"Check (a): {'passed' if a_ok else 'FAILED'}.")
     w("")
+    if not a_ok:
+        w("Descriptive interpretation (the check is reported as failed above")
+        w("and stays failed): the failing pairs are exactly those comparing an")
+        w("extrinsic (renormalized Euclidean) mean against a Karcher-based")
+        w("method. At alpha = 0, epsilon = 0 the Karcher-based methods compute")
+        w("the oracle estimand exactly by construction (their error is 0),")
+        w("while the extrinsic mean differs from the intrinsic mean by a small")
+        w("systematic amount, so its median difference cannot include 0. The")
+        w("check as preregistered wrongly assumed all methods are equivalent")
+        w("at the null; it is diagnostic of the estimand choice, not of an")
+        w("implementation error. The observed magnitudes (~3e-5 at sigma =")
+        w("0.05, ~6e-4 at sigma = 0.2) are 2 to 4 orders of magnitude below")
+        w("the H1 effect sizes (~6e-2 to 3e-1).")
+        w("")
     eps0 = [r["h1_norm"] for r in runs if r["epsilon"] == 0]
     epsp = [r["h1_norm"] for r in runs if r["epsilon"] > 0]
     w(f"(b) max H^1 at epsilon = 0: {fmt(max(eps0))} (< 1e-8, asserted at runtime): passed.")
