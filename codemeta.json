@@ -6,7 +6,7 @@
   "codeRepository": "https://github.com/smaniches/GROUPOID",
   "programmingLanguage": "Python",
   "license": "Apache-2.0",
-  "version": "0.1.0.dev2",
+  "version": "0.1.0.dev3",
   "author": [
     {
       "@type": "Person",
