@@ -87,16 +87,23 @@ please open an issue using the "Mathematical Correction" template.
    template.
 2. Merge the PR to `main`.
 
-That's it — merging is the release trigger. `.github/workflows/release.yml`
-runs on every push to `main`; its `detect` job reads the version out of
-`pyproject.toml`, and if no `v<version>` tag exists yet, it creates and
-pushes one automatically (using the standard `github-actions[bot]`
-identity) and the rest of the workflow proceeds exactly as it would from
-a manual tag push: build, provenance and SBOM attestation, publish to
-PyPI via Trusted Publishing, Sigstore signing, and a GitHub Release
-(which in turn triggers the Zenodo deposit for the new version DOI). A
-push to `main` with no version change is a no-op — the tag already
-exists, so `detect` skips the rest of the workflow.
+That's it — merging is the release trigger, split across two workflows
+with one job each so the actual publish path has exactly one trigger to
+reason about:
+
+- `.github/workflows/auto-tag-release.yml` runs on every push to `main`
+  that touches `pyproject.toml`. It reads the version out of
+  `pyproject.toml`, and if no `v<version>` tag exists yet, it creates and
+  pushes one (as `github-actions[bot]`) after checking the version has a
+  recognized format and that `CHANGELOG.md` documents it. A push with no
+  version change, or whose tag already exists, is a no-op.
+- That tag push triggers `.github/workflows/release.yml` exactly as a
+  manual `git tag vX.Y.Z && git push origin vX.Y.Z` would: build,
+  provenance and SBOM attestation, publish to PyPI via Trusted
+  Publishing, Sigstore signing, and a GitHub Release (which in turn
+  triggers the Zenodo deposit for the new version DOI). `release.yml`
+  itself is unchanged from before this automation existed — it only
+  ever runs from a tag push or a manual `workflow_dispatch`.
 
 The actual PyPI publish step still runs under the `pypi` GitHub
 Environment; if that environment has required reviewers configured, the
