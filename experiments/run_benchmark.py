@@ -83,7 +83,8 @@ def karcher_with_warning_flag(manifold, points):
 
 def normalize(v: np.ndarray) -> np.ndarray:
     n = float(np.linalg.norm(v))
-    assert n > 1e-12, "degenerate extrinsic mean"
+    if n <= 1e-12:
+        raise RuntimeError("degenerate extrinsic mean")
     return v / n
 
 
@@ -129,9 +130,12 @@ def run_one(manifold, alpha_i: int, sigma_i: int, eps_i: int, seed_i: int) -> di
     # Manipulation checks (b) and (c): H^1 vanishes exactly on the
     # coboundary and is positive under corruption.
     if epsilon == 0:
-        assert round_result.h1_norm < 1e-8, f"H^1 = {round_result.h1_norm} on exact coboundary"
-    else:
-        assert round_result.h1_norm > 0.0, "H^1 = 0 under corrupted transports"
+        if round_result.h1_norm >= 1e-8:
+            raise RuntimeError(
+                f"check (b) failed: H^1 = {round_result.h1_norm} on exact coboundary"
+            )
+    elif round_result.h1_norm <= 0.0:
+        raise RuntimeError("check (c) failed: H^1 = 0 under corrupted transports")
 
     dist = manifold.metric.dist
     return {
@@ -180,7 +184,8 @@ def main() -> None:
     for group in by_key.values():
         for method in ("euclidean", "karcher"):
             vals = {g["err_oracle"][method] for g in group}
-            assert len(vals) == 1, f"check (d) failed: {method} varies across epsilon"
+            if len(vals) != 1:
+                raise RuntimeError(f"check (d) failed: {method} varies across epsilon")
 
     import geomstats
     import scipy
