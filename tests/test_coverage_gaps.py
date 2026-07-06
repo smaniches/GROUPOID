@@ -142,8 +142,10 @@ class TestOptimizerPaths:
         assert opt._velocity is not None
         p2 = opt.step(p1, grad)
         assert manifold.belongs(p2, atol=1e-4)
-        # Velocity stays in the tangent space at the current point.
-        assert manifold.is_tangent(opt._velocity, p1, atol=1e-4)
+        # The velocity is parallel-transported to the tangent space at the
+        # latest iterate (see test_optimizer_validation.py for the
+        # transport-vs-projection discrimination).
+        assert manifold.is_tangent(opt._velocity, p2, atol=1e-4)
 
     def test_adam_second_step_updates_moment(self):
         manifold = Hypersphere(dim=2)

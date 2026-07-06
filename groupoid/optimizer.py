@@ -9,6 +9,15 @@ This module provides:
 - Riemannian SGD with retraction
 - Riemannian Adam with exponential map updates
 - Adaptive learning rate based on sectional curvature
+
+Accumulated moments (the SGD momentum velocity and Adam's first moment)
+live in the tangent space of the iterate that produced them. After each
+step they are parallel-transported into the new iterate's tangent space
+when the metric provides parallel transport (the construction of
+Becigneul & Ganea, "Riemannian Adaptive Optimization Methods", ICLR 2019),
+and projected onto it otherwise. Transport is an isometry, so it moves the
+moment without shrinking it; projection is a coarser fallback that can
+lose the component normal to the new tangent space.
 """
 
 from __future__ import annotations
@@ -21,13 +30,42 @@ import numpy.typing as npt
 from loguru import logger
 
 
+def _transport_moment(
+    manifold: Any,  # geomstats manifold; no upstream type stubs
+    moment: npt.NDArray[np.float64],
+    base_point: npt.NDArray[np.float64],
+    new_point: npt.NDArray[np.float64],
+) -> npt.NDArray[np.float64]:
+    """Move an accumulated moment from base_point's tangent space to new_point's.
+
+    Uses the metric's parallel transport when available (isometric: the
+    moment's norm is preserved exactly). Falls back to projection onto the
+    new tangent space for metrics that do not implement parallel transport,
+    mirroring the compatibility shims elsewhere in this package.
+    """
+    metric = manifold.metric
+    if hasattr(metric, "parallel_transport"):
+        try:
+            transported: npt.NDArray[np.float64] = metric.parallel_transport(
+                moment, base_point, end_point=new_point
+            )
+            return transported
+        except NotImplementedError:
+            pass
+    projected: npt.NDArray[np.float64] = manifold.to_tangent(moment, new_point)
+    return projected
+
+
 @dataclass
 class RiemannianSGD:
     """Riemannian stochastic gradient descent.
 
     Updates parameters by computing the Riemannian gradient (projection
     of Euclidean gradient onto tangent space) and retracting back to
-    the manifold via the exponential map.
+    the manifold via the exponential map. With momentum, the velocity is
+    parallel-transported into each new iterate's tangent space (see the
+    module docstring), so it accumulates geometry-consistently across
+    steps.
 
     Parameters
     ----------
@@ -64,7 +102,10 @@ class RiemannianSGD:
         # Project gradient onto tangent space
         riemannian_grad = self.manifold.to_tangent(euclidean_grad, point)
 
-        # Apply momentum
+        # Apply momentum. _velocity was parallel-transported into `point`'s
+        # tangent space at the end of the previous step; the to_tangent wrap
+        # keeps the combination numerically tangent (and tolerates callers
+        # stepping from a point other than the previous iterate).
         vel: npt.NDArray[np.float64]
         if self.momentum > 0:
             if self._velocity is None:
@@ -73,13 +114,16 @@ class RiemannianSGD:
                 vel = self.manifold.to_tangent(
                     self.momentum * self._velocity + riemannian_grad, point
                 )
-            self._velocity = vel
             update = -self.lr * vel
         else:
             update = -self.lr * riemannian_grad
 
         # Retract to manifold via exponential map
         new_point: npt.NDArray[np.float64] = self.manifold.metric.exp(update, point)
+
+        # Carry the velocity to the new iterate's tangent space.
+        if self.momentum > 0:
+            self._velocity = _transport_moment(self.manifold, vel, point, new_point)
 
         return new_point
 
@@ -90,7 +134,11 @@ class RiemannianAdam:
 
     Adapts the Adam optimizer to Riemannian manifolds by maintaining
     exponential moving averages of the Riemannian gradient and its
-    squared norm, with updates via the exponential map.
+    squared norm, with updates via the exponential map. The first moment
+    is parallel-transported into each new iterate's tangent space (see
+    the module docstring); the second moment is a scalar gradient-norm
+    average and needs no transport because parallel transport is an
+    isometry (norms are invariant).
 
     Parameters
     ----------
@@ -143,6 +191,10 @@ class RiemannianAdam:
         # m_hat = m_1 / (1 - beta1) recovers `grad` on the first step. Seeding
         # m_1 = grad directly would leave the 1/(1-beta1) factor uncancelled and
         # inflate the first update by ~10x (beta1=0.9).
+        # _m was parallel-transported into `point`'s tangent space at the end
+        # of the previous step; the to_tangent wrap keeps the combination
+        # numerically tangent (and tolerates callers stepping from a point
+        # other than the previous iterate).
         first_moment: npt.NDArray[np.float64]
         if self._m is None:
             first_moment = (1 - self.beta1) * grad
@@ -150,7 +202,6 @@ class RiemannianAdam:
             first_moment = self.manifold.to_tangent(
                 self.beta1 * self._m + (1 - self.beta1) * grad, point
             )
-        self._m = first_moment
 
         # Update biased second moment (scalar, norm-based)
         self._v = self.beta2 * self._v + (1 - self.beta2) * grad_norm_sq
@@ -164,6 +215,10 @@ class RiemannianAdam:
         update = self.manifold.to_tangent(update, point)
 
         new_point: npt.NDArray[np.float64] = self.manifold.metric.exp(update, point)
+
+        # Carry the first moment to the new iterate's tangent space.
+        self._m = _transport_moment(self.manifold, first_moment, point, new_point)
+
         return new_point
 
 
