@@ -1,18 +1,27 @@
 name: Auto Tag Release
 
-# Creates the tag for a release-cut merge to main; it does nothing else.
+# Creates the tag for a release-cut merge to main, then explicitly dispatches
 # release.yml (build, attestations, PyPI publish, signing, GitHub Release)
-# is triggered solely by that tag push, exactly as it would be from a
-# manual `git tag vX.Y.Z && git push origin vX.Y.Z`. Keeping tag creation
-# and publishing in two separate, single-purpose workflows means the
-# actual publish path has exactly one trigger (a tag push) to reason
-# about, instead of depending on GitHub's anti-recursion behavior for
-# GITHUB_TOKEN-authored pushes not re-triggering the same push event.
+# against that tag.
 #
-# If a version needs a tag this workflow's format check rejects (see
-# below), tag it manually -- this automation only ever creates a tag
-# when one is missing, so a pre-existing manual tag always takes
-# precedence and this workflow becomes a no-op for that version.
+# The dispatch is explicit, not a tag-push trigger, because GitHub suppresses
+# push-triggered workflow runs caused by a GITHUB_TOKEN-authored push: pushing
+# the tag here does NOT cause release.yml's `on.push.tags` trigger to fire.
+# workflow_dispatch is the documented exception to that suppression, which is
+# why this workflow calls `gh workflow run` instead of relying on the tag
+# push itself. (An earlier version of this workflow assumed the tag push
+# alone would trigger release.yml; it did not, and no release was produced
+# for v0.1.0.dev4 until this was fixed and the release re-run manually.)
+#
+# release.yml's own `push.tags` trigger remains as a fallback/manual path
+# (a human pushing a tag with their own credentials is not subject to this
+# suppression), alongside its `workflow_dispatch` trigger for republishing an
+# existing tag to PyPI only.
+#
+# If a version needs a tag this workflow's format check rejects (see below),
+# tag it manually -- this automation only ever creates a tag when one is
+# missing, so a pre-existing manual tag always takes precedence and this
+# workflow becomes a no-op for that version.
 
 on:
   push:
@@ -27,13 +36,16 @@ jobs:
   tag:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # push the tag; nothing else in this workflow needs it
+      contents: write   # push the tag
+      actions: write    # dispatch release.yml via `gh workflow run`
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           fetch-depth: 0   # need full tag history to check for an existing tag
 
-      - name: Create the release tag if this version doesn't have one yet
+      - name: Create the release tag if this version doesn't have one yet, and dispatch the release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
@@ -70,3 +82,10 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "${tag}" -m "Release ${tag}"
           git push origin "refs/tags/${tag}"
+
+          echo "Dispatching release.yml for ${tag}."
+          gh workflow run release.yml \
+            --repo "${GITHUB_REPOSITORY}" \
+            --ref "${tag}" \
+            -f "ref=${tag}" \
+            -f "create_github_release=true"

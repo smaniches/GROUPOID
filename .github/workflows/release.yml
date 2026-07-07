@@ -7,9 +7,14 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Existing tag/ref to build and publish to PyPI (e.g. v0.1.0.dev1). PyPI only — does NOT create a GitHub Release or Zenodo deposit. Leave blank for a normal tag-triggered release."
+        description: "Existing tag/ref to build and publish (e.g. v0.1.0.dev1). Leave blank for a normal tag-triggered release."
         required: false
         default: ""
+      create_github_release:
+        description: "Also sign with Sigstore and create a GitHub Release (which triggers the Zenodo deposit) for this tag. Default false: PyPI publish only, for republishing an already-released tag without creating a duplicate GitHub Release. auto-tag-release.yml sets this true when it dispatches a new version's first release."
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -74,13 +79,19 @@ jobs:
         with:
           packages-dir: dist
           print-hash: true
+          # Idempotent: a re-dispatch or an out-of-band manual republish of a
+          # version already on PyPI should not fail the job.
+          skip-existing: true
 
   sign-and-release:
     needs: build
-    # Only on a real tag push — a manual workflow_dispatch (used to publish an
-    # already-released tag to PyPI) must NOT create a duplicate GitHub Release
-    # or trigger a second Zenodo deposit.
-    if: github.event_name == 'push'
+    # On a real tag push, or an explicit request via create_github_release=true
+    # (see auto-tag-release.yml, which dispatches this workflow with that flag
+    # set for a version's first release, since GitHub suppresses push-triggered
+    # workflow runs caused by its own GITHUB_TOKEN). A plain workflow_dispatch
+    # republish (create_github_release left at its false default) must NOT
+    # create a duplicate GitHub Release or trigger a second Zenodo deposit.
+    if: github.event_name == 'push' || github.event.inputs.create_github_release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write       # create GitHub Release
@@ -100,6 +111,10 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b  # v3.0.1
         with:
+          # Explicit rather than relying on ref inference: on a tag push
+          # github.ref_name is already the tag, but being explicit keeps this
+          # correct regardless of trigger type.
+          tag_name: ${{ github.event.inputs.ref || github.ref_name }}
           generate_release_notes: true
           files: |
             dist/*

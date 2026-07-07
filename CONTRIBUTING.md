@@ -88,8 +88,7 @@ please open an issue using the "Mathematical Correction" template.
 2. Merge the PR to `main`.
 
 That's it — merging is the release trigger, split across two workflows
-with one job each so the actual publish path has exactly one trigger to
-reason about:
+with one job each:
 
 - `.github/workflows/auto-tag-release.yml` runs on every push to `main`
   that touches `pyproject.toml`. It reads the version out of
@@ -97,13 +96,23 @@ reason about:
   pushes one (as `github-actions[bot]`) after checking the version has a
   recognized format and that `CHANGELOG.md` documents it. A push with no
   version change, or whose tag already exists, is a no-op.
-- That tag push triggers `.github/workflows/release.yml` exactly as a
-  manual `git tag vX.Y.Z && git push origin vX.Y.Z` would: build,
+- It then explicitly dispatches `.github/workflows/release.yml` against
+  that tag with `create_github_release: true`, rather than relying on the
+  tag push itself to trigger it. This is necessary, not a stylistic
+  choice: GitHub suppresses push-triggered workflow runs caused by a
+  `GITHUB_TOKEN`-authored push, so the tag push from
+  `auto-tag-release.yml` does *not* fire `release.yml`'s own
+  `push.tags` trigger (`workflow_dispatch` is the documented exception to
+  that suppression). `release.yml` then does what it always did: build,
   provenance and SBOM attestation, publish to PyPI via Trusted
   Publishing, Sigstore signing, and a GitHub Release (which in turn
-  triggers the Zenodo deposit for the new version DOI). `release.yml`
-  itself is unchanged from before this automation existed — it only
-  ever runs from a tag push or a manual `workflow_dispatch`.
+  triggers the Zenodo deposit for the new version DOI).
+- `release.yml`'s `push.tags` trigger remains as a fallback/manual path —
+  a human pushing a tag with their own credentials is not subject to the
+  `GITHUB_TOKEN` suppression above, so that still works normally. Its
+  `workflow_dispatch` trigger (`create_github_release` left at its default
+  `false`) republishes an existing tag to PyPI only, without creating a
+  duplicate GitHub Release or Zenodo deposit.
 
 The actual PyPI publish step still runs under the `pypi` GitHub
 Environment; if that environment has required reviewers configured, the

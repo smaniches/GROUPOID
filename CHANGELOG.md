@@ -8,7 +8,19 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+- **Release automation did not actually fire**: `auto-tag-release.yml`
+  (added in 0.1.0.dev4) pushed the release tag using the workflow's
+  default `GITHUB_TOKEN` and assumed that push would trigger
+  `release.yml`. GitHub suppresses push-triggered workflow runs caused
+  by a `GITHUB_TOKEN`-authored push, so it never did: the `v0.1.0.dev4`
+  tag was created but no build, PyPI publish, signing, GitHub Release,
+  or Zenodo deposit ever happened. `auto-tag-release.yml` now explicitly
+  dispatches `release.yml` via `gh workflow run` (`workflow_dispatch` is
+  the documented exception to that suppression) with a new
+  `create_github_release` input so the dispatched run also signs and
+  creates the GitHub Release, not just publishes to PyPI. See the
+  "Releasing" section of `CONTRIBUTING.md`.
 
 ## [0.1.0.dev4] - 2026-07-06
 
