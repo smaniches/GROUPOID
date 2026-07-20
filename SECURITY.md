@@ -31,3 +31,13 @@ releases.
   upgrade to, and the ignore is revisited when upstream publishes one. The
   advisory concerns crafted-checkpoint / JIT deserialization (`torch.load` and
   related paths), which GROUPOID's own code does not exercise.
+- The CI-pinned `setuptools` (held to `>=78.1.1,<82` because `torch` requires
+  `setuptools<82`) is flagged by `pip-audit` for advisory PYSEC-2026-3447
+  (CVE-2026-59890): prior to setuptools 83.0.0, `MANIFEST.in` exclude,
+  `global-exclude`, `recursive-exclude`, and `prune` directives could be
+  bypassed on macOS APFS/HFS+ by NFD-normalized file names, packing excluded
+  files into source distributions. The fixed release (83.0.0) is outside the
+  window torch permits, and the affected code path requires building an sdist
+  on a macOS filesystem — all GROUPOID CI and release builds run on
+  `ubuntu-latest`. CI tracks the advisory via a documented `--ignore-vuln`;
+  the ignore is revisited once torch allows `setuptools>=83`.
