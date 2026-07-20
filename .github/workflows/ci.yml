@@ -83,14 +83,21 @@ jobs:
       - name: Audit dependencies for known vulnerabilities (pip-audit)
         # pip-audit (OSV-backed, maintained) replaces the deprecated `safety check`
         # (deprecated in safety 3.x in favour of the account-gated `safety scan`).
-        # HARD gate: any advisory with a fix version fails the job. The single
-        # documented exception is CVE-2025-3000 (torch): no fixed release exists
-        # upstream, and OSV expresses the affected range (listed versions up to
-        # v2.6.0) as a Git/commit boundary pip-audit cannot version-resolve, so it
-        # conservatively flags the installed torch. Disclosed in SECURITY.md; the
-        # torch.load / JIT deserialization path is not exercised by GROUPOID. Revisit
-        # the ignore once upstream publishes a fixed release.
-        run: pip-audit --ignore-vuln CVE-2025-3000
+        # HARD gate: any advisory with a fix version fails the job. Two documented
+        # exceptions, both disclosed in SECURITY.md:
+        # - CVE-2025-3000 (torch): no fixed release exists upstream, and OSV
+        #   expresses the affected range (listed versions up to v2.6.0) as a
+        #   Git/commit boundary pip-audit cannot version-resolve, so it
+        #   conservatively flags the installed torch. The torch.load / JIT
+        #   deserialization path is not exercised by GROUPOID. Revisit the ignore
+        #   once upstream publishes a fixed release.
+        # - PYSEC-2026-3447 (CVE-2026-59890, setuptools <83): the fix (83.0.0) is
+        #   unreachable while torch requires setuptools<82 (see the install step
+        #   above). The flaw is a macOS-only (APFS/HFS+) Unicode-normalization
+        #   bypass of MANIFEST.in exclude rules when building sdists; all CI and
+        #   release builds run on ubuntu-latest. Drop the ignore once torch
+        #   permits setuptools>=83.
+        run: pip-audit --ignore-vuln CVE-2025-3000 --ignore-vuln PYSEC-2026-3447
 
   pre-commit:
     runs-on: ubuntu-latest
