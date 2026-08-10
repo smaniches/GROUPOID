@@ -41,16 +41,40 @@ jobs:
           pip install cyclonedx-bom
       - name: Build sdist + wheel
         run: python -m build
-      - name: Generate CycloneDX SBOM
-        run: cyclonedx-py requirements -o sbom.cdx.json <(pip freeze)
+      - name: Generate CycloneDX SBOM from exact release wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          wheels=(dist/*.whl)
+          if (( ${#wheels[@]} != 1 )); then
+            echo "::error::expected exactly one release wheel, found ${#wheels[@]}"
+            exit 1
+          fi
+          wheel="${wheels[0]}"
+
+          # Keep build tooling out of the analyzed environment. pip's --python
+          # option installs the exact wheel and its resolved runtime graph into
+          # a venv that was created without pip.
+          python -m venv --without-pip .sbom-runtime
+          python -m pip --python .sbom-runtime install "$wheel"
+
+          cyclonedx-py environment .sbom-runtime/bin/python \
+            --pyproject pyproject.toml \
+            --mc-type library \
+            --output-reproducible \
+            --output-format JSON \
+            --output-file sbom.cdx.json
+          python scripts/bind_release_sbom.py --sbom sbom.cdx.json --wheel "$wheel"
+          python scripts/bind_release_sbom.py --verify-only --sbom sbom.cdx.json --wheel "$wheel"
       - name: Provenance attestation (dist)
         uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373  # v4.1.1
         with:
           subject-path: "dist/*"
-      - name: SBOM attestation (CycloneDX)
+      - name: SBOM attestation (exact wheel)
         uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e  # v4.1.0
         with:
-          subject-path: "dist/*"
+          subject-path: "dist/*.whl"
           sbom-path: "sbom.cdx.json"
       - name: Upload artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
