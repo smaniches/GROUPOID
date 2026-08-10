@@ -20,12 +20,16 @@ permissions:
   contents: read
 
 jobs:
+  # Privilege separation: this job holds the attestation credentials, so it
+  # must never install the built wheel or resolve its runtime dependency
+  # graph. SBOM generation (which does both) runs in the unprivileged `sbom`
+  # job; the SBOM attestation runs in `attest-sbom`, which installs nothing.
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write       # provenance OIDC
-      attestations: write   # actions/attest-build-provenance + attest-sbom
+      attestations: write   # actions/attest-build-provenance
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -36,11 +40,49 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install build tooling
-        run: |
-          python -m pip install --upgrade pip build
-          pip install cyclonedx-bom
+        run: python -m pip install --upgrade pip build
       - name: Build sdist + wheel
         run: python -m build
+      - name: Assert exactly one release wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          wheels=(dist/*.whl)
+          if (( ${#wheels[@]} != 1 )); then
+            echo "::error::expected exactly one release wheel, found ${#wheels[@]}"
+            exit 1
+          fi
+      - name: Provenance attestation (dist)
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373  # v4.1.1
+        with:
+          subject-path: "dist/*"
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: release-dist
+          path: dist/
+
+  # Unprivileged by design: installing the wheel resolves and executes
+  # third-party package installs, so this job gets no id-token, no
+  # attestations, no write access of any kind.
+  sbom:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          name: release-dist
+          path: dist
       - name: Generate CycloneDX SBOM from exact release wheel
         shell: bash
         run: |
@@ -52,6 +94,8 @@ jobs:
             exit 1
           fi
           wheel="${wheels[0]}"
+
+          python -m pip install --upgrade pip cyclonedx-bom
 
           # Keep build tooling out of the analyzed environment. pip's --python
           # option installs the exact wheel and its resolved runtime graph into
@@ -66,26 +110,54 @@ jobs:
             --output-format JSON \
             --output-file sbom.cdx.json
           python scripts/bind_release_sbom.py --sbom sbom.cdx.json --wheel "$wheel"
-          python scripts/bind_release_sbom.py --verify-only --sbom sbom.cdx.json --wheel "$wheel"
-      - name: Provenance attestation (dist)
-        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373  # v4.1.1
+      - name: Independently verify SBOM root against exact wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          wheels=(dist/*.whl)
+          if (( ${#wheels[@]} != 1 )); then
+            echo "::error::expected exactly one release wheel, found ${#wheels[@]}"
+            exit 1
+          fi
+          python scripts/bind_release_sbom.py --verify-only --sbom sbom.cdx.json --wheel "${wheels[0]}"
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
-          subject-path: "dist/*"
-      - name: SBOM attestation (exact wheel)
-        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e  # v4.1.0
+          name: release-sbom
+          path: sbom.cdx.json
+
+  # The only privileged SBOM step. It consumes the already-built wheel and the
+  # already-verified SBOM; it installs no packages, resolves no dependencies,
+  # and executes no project code. The SBOM describes the installed wheel's
+  # runtime closure, so it is attested to the wheel subject only — never the
+  # sdist.
+  attest-sbom:
+    needs: [build, sbom]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write       # attestation OIDC
+      attestations: write   # actions/attest-sbom
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          name: release-dist
+          path: dist
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          name: release-sbom
+          path: .
+      - uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e  # v4.1.0
         with:
           subject-path: "dist/*.whl"
           sbom-path: "sbom.cdx.json"
-      - name: Upload artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-        with:
-          name: release-artifacts
-          path: |
-            dist/*
-            sbom.cdx.json
 
   publish-pypi:
-    needs: build
+    # Publication waits for the full integrity chain: build provenance
+    # (build), SBOM generation + verification (sbom), and the wheel-bound
+    # SBOM attestation (attest-sbom).
+    needs: [build, sbom, attest-sbom]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -96,8 +168,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
-          name: release-artifacts
-          path: .
+          name: release-dist
+          path: dist
       - name: Publish to PyPI (Trusted Publishing, OIDC)
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # release/v1
         with:
@@ -108,7 +180,7 @@ jobs:
           skip-existing: true
 
   sign-and-release:
-    needs: build
+    needs: [build, sbom, attest-sbom]
     # On a real tag push, or an explicit request via create_github_release=true
     # (see auto-tag-release.yml, which dispatches this workflow with that flag
     # set for a version's first release, since GitHub suppresses push-triggered
@@ -124,7 +196,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
-          name: release-artifacts
+          name: release-dist
+          path: dist
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          name: release-sbom
           path: .
       - name: Sign artifacts with Sigstore
         uses: sigstore/gh-action-sigstore-python@790bc6befb9d733738f18d8f895854b453640ec9  # v3.5.0
