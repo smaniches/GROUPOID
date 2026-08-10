@@ -53,9 +53,7 @@ def test_bind_records_exact_wheel_sha256(tmp_path: Path) -> None:
     data = json.loads(sbom.read_text(encoding="utf-8"))
 
     assert digest == hashlib.sha256(wheel.read_bytes()).hexdigest()
-    assert data["metadata"]["component"]["hashes"] == [
-        {"alg": "SHA-256", "content": digest}
-    ]
+    assert data["metadata"]["component"]["hashes"] == [{"alg": "SHA-256", "content": digest}]
     assert MODULE.verify(sbom, wheel) == digest
 
 
@@ -83,10 +81,76 @@ def test_bind_rejects_conflicting_existing_digest(tmp_path: Path) -> None:
     wheel = _wheel(tmp_path)
     sbom = _sbom(tmp_path)
     data = json.loads(sbom.read_text(encoding="utf-8"))
-    data["metadata"]["component"]["hashes"] = [
-        {"alg": "SHA-256", "content": "0" * 64}
-    ]
+    data["metadata"]["component"]["hashes"] = [{"alg": "SHA-256", "content": "0" * 64}]
     sbom.write_text(json.dumps(data), encoding="utf-8")
+    before = sbom.read_text(encoding="utf-8")
 
     with pytest.raises(MODULE.BindingError, match="conflicting SHA-256"):
         MODULE.bind(sbom, wheel)
+    assert sbom.read_text(encoding="utf-8") == before
+
+
+def test_bind_rejects_root_version_mismatch(tmp_path: Path) -> None:
+    wheel = _wheel(tmp_path)
+    sbom = _sbom(tmp_path, version="9.9.9")
+
+    with pytest.raises(MODULE.BindingError, match="does not match wheel version"):
+        MODULE.bind(sbom, wheel)
+
+
+def test_bind_accepts_exactly_one_identical_digest(tmp_path: Path) -> None:
+    wheel = _wheel(tmp_path)
+    sbom = _sbom(tmp_path)
+
+    digest = MODULE.bind(sbom, wheel)
+    assert MODULE.bind(sbom, wheel) == digest
+
+    data = json.loads(sbom.read_text(encoding="utf-8"))
+    assert data["metadata"]["component"]["hashes"] == [{"alg": "SHA-256", "content": digest}]
+
+
+def test_bind_rejects_multiple_sha256_entries_even_when_identical(tmp_path: Path) -> None:
+    wheel = _wheel(tmp_path)
+    sbom = _sbom(tmp_path)
+    digest = hashlib.sha256(wheel.read_bytes()).hexdigest()
+    data = json.loads(sbom.read_text(encoding="utf-8"))
+    data["metadata"]["component"]["hashes"] = [
+        {"alg": "SHA-256", "content": digest},
+        {"alg": "SHA-256", "content": digest},
+    ]
+    sbom.write_text(json.dumps(data), encoding="utf-8")
+    before = sbom.read_text(encoding="utf-8")
+
+    with pytest.raises(MODULE.BindingError, match="multiple SHA-256"):
+        MODULE.bind(sbom, wheel)
+    assert sbom.read_text(encoding="utf-8") == before
+
+
+def test_verify_rejects_multiple_sha256_entries(tmp_path: Path) -> None:
+    wheel = _wheel(tmp_path)
+    sbom = _sbom(tmp_path)
+    digest = MODULE.bind(sbom, wheel)
+    data = json.loads(sbom.read_text(encoding="utf-8"))
+    data["metadata"]["component"]["hashes"].append({"alg": "SHA-256", "content": digest})
+    sbom.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(MODULE.BindingError, match="does not equal wheel SHA-256"):
+        MODULE.verify(sbom, wheel)
+
+
+def test_bind_preserves_unrelated_hash_algorithms(tmp_path: Path) -> None:
+    wheel = _wheel(tmp_path)
+    sbom = _sbom(tmp_path)
+    unrelated = {"alg": "SHA-1", "content": "a" * 40}
+    data = json.loads(sbom.read_text(encoding="utf-8"))
+    data["metadata"]["component"]["hashes"] = [dict(unrelated)]
+    sbom.write_text(json.dumps(data), encoding="utf-8")
+
+    digest = MODULE.bind(sbom, wheel)
+
+    data = json.loads(sbom.read_text(encoding="utf-8"))
+    assert data["metadata"]["component"]["hashes"] == [
+        unrelated,
+        {"alg": "SHA-256", "content": digest},
+    ]
+    assert MODULE.verify(sbom, wheel) == digest

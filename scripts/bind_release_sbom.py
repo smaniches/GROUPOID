@@ -7,6 +7,7 @@ artifact-identity gap by reading Name/Version from the wheel itself and adding
 its SHA-256 to metadata.component. Verification fails closed if the SBOM root
 and wheel identity diverge or the recorded digest is absent/wrong.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -35,18 +36,14 @@ def _wheel_identity(wheel: Path) -> tuple[str, str]:
     try:
         with zipfile.ZipFile(wheel) as archive:
             metadata_members = [
-                name
-                for name in archive.namelist()
-                if name.endswith(".dist-info/METADATA")
+                name for name in archive.namelist() if name.endswith(".dist-info/METADATA")
             ]
             if len(metadata_members) != 1:
                 raise BindingError(
                     f"expected exactly one .dist-info/METADATA in {wheel}, "
                     f"found {len(metadata_members)}"
                 )
-            message = BytesParser(policy=default).parsebytes(
-                archive.read(metadata_members[0])
-            )
+            message = BytesParser(policy=default).parsebytes(archive.read(metadata_members[0]))
     except (OSError, zipfile.BadZipFile, KeyError) as exc:
         raise BindingError(f"cannot read wheel metadata from {wheel}: {exc}") from exc
 
@@ -94,7 +91,9 @@ def _root_component(data: dict[str, Any]) -> dict[str, Any]:
 def _assert_identity(component: dict[str, Any], wheel_name: str, wheel_version: str) -> None:
     root_name = component.get("name")
     root_version = component.get("version")
-    if not isinstance(root_name, str) or _normalized_name(root_name) != _normalized_name(wheel_name):
+    if not isinstance(root_name, str) or _normalized_name(root_name) != _normalized_name(
+        wheel_name
+    ):
         raise BindingError(
             f"SBOM root name {root_name!r} does not match wheel name {wheel_name!r}"
         )
@@ -130,16 +129,17 @@ def bind(sbom: Path, wheel: Path) -> str:
     _assert_identity(component, wheel_name, wheel_version)
 
     existing = _sha256_entries(component)
-    if existing and any(value != digest for value in existing):
+    if len(existing) > 1:
         raise BindingError(
-            "SBOM already contains a conflicting SHA-256 for the root component"
+            "SBOM root component carries multiple SHA-256 entries; "
+            "refusing to rewrite contradictory evidence"
         )
+    if existing and existing[0] != digest:
+        raise BindingError("SBOM already contains a conflicting SHA-256 for the root component")
 
     hashes = component.get("hashes", [])
     component["hashes"] = [
-        entry
-        for entry in hashes
-        if str(entry.get("alg", "")).upper() not in _SHA256_ALGS
+        entry for entry in hashes if str(entry.get("alg", "")).upper() not in _SHA256_ALGS
     ] + [{"alg": "SHA-256", "content": digest}]
 
     temporary = sbom.with_suffix(sbom.suffix + ".tmp")
@@ -166,9 +166,7 @@ def verify(sbom: Path, wheel: Path) -> str:
 
     recorded = _sha256_entries(component)
     if recorded != [digest]:
-        raise BindingError(
-            f"SBOM root SHA-256 {recorded!r} does not equal wheel SHA-256 {digest}"
-        )
+        raise BindingError(f"SBOM root SHA-256 {recorded!r} does not equal wheel SHA-256 {digest}")
     return digest
 
 
