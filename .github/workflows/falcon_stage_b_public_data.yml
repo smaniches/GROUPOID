@@ -1,0 +1,51 @@
+name: FALCON Stage B public context transport
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/acquire_falcon_stage_b_public_data.py'
+      - '.github/workflows/falcon_stage_b_public_data.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acquire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Acquire immutable EPSS, KEV, and historical CVE context
+        run: |
+          set -euo pipefail
+          python tools/acquire_falcon_stage_b_public_data.py --out falcon_stage_b_public_data
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          m=json.loads(Path('falcon_stage_b_public_data/manifest.json').read_text())
+          assert len(m['cve_context_records']) == 12
+          assert len(m['epss_records']) >= 40
+          assert all(x['compact_rows'] >= 100000 for x in m['cve_context_records'])
+          print(json.dumps({
+              'context_files': len(m['cve_context_records']),
+              'epss_files': len(m['epss_records']),
+              'context_bytes': sum(x['compact_bytes'] for x in m['cve_context_records']),
+          }, sort_keys=True))
+          PY
+          tar -czf falcon_stage_b_public_data.tar.gz falcon_stage_b_public_data
+          sha256sum falcon_stage_b_public_data.tar.gz > falcon_stage_b_public_data.tar.gz.sha256
+      - name: Upload validated compact public context data
+        uses: actions/upload-artifact@v4
+        with:
+          name: falcon-stage-b-public-data-rc8
+          path: |
+            falcon_stage_b_public_data.tar.gz
+            falcon_stage_b_public_data.tar.gz.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
