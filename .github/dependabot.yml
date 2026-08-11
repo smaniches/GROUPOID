@@ -28,6 +28,15 @@ updates:
     # updates patch vulnerable dependencies regardless of this allow filter.
     allow:
       - dependency-type: "direct"
+    # numpy 2.x is a verified runtime incompatibility, not a routine bump:
+    # geomstats (a required runtime dependency) fails at import under
+    # numpy>=2.0 because `numpy.trapz` was removed, so the tested
+    # numpy>=1.24,<2.0 contract in pyproject.toml cannot widen (see closed
+    # PR #57). Scoped by version, not a blanket numpy ignore: compatible
+    # numpy 1.x version updates and 1.x security updates still flow.
+    ignore:
+      - dependency-name: "numpy"
+        versions: [">=2.0.0"]
     groups:
       # Batch updates by area into a single PR per group to limit noise instead
       # of one PR per package.
