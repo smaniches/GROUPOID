@@ -1,0 +1,50 @@
+name: FALCON public data transport
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/acquire_falcon_public_data.py'
+      - '.github/workflows/falcon_public_data_transport.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acquire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Acquire and validate immutable public sources
+        run: |
+          set -euo pipefail
+          python tools/acquire_falcon_public_data.py --out falcon_public_data
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          m=json.loads(Path('falcon_public_data/manifest.json').read_text())
+          assert m['epss_snapshot_count'] >= 40
+          assert len(m['records']) == m['epss_snapshot_count'] + 1
+          print(json.dumps({
+              'records': len(m['records']),
+              'epss_snapshot_count': m['epss_snapshot_count'],
+              'epss_commit': m['epss_commit'],
+              'kev_commit': m['kev_commit'],
+          }, sort_keys=True))
+          PY
+          tar -czf falcon_public_data.tar.gz falcon_public_data
+          sha256sum falcon_public_data.tar.gz > falcon_public_data.tar.gz.sha256
+      - name: Upload validated public data
+        uses: actions/upload-artifact@v4
+        with:
+          name: falcon-public-data-rc8
+          path: |
+            falcon_public_data.tar.gz
+            falcon_public_data.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 1
