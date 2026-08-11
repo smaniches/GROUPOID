@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'tools/acquire_falcon_stage_b_public_data_v2.py'
+      - 'tools/acquire_falcon_stage_b_public_data_v3.py'
       - '.github/workflows/falcon_stage_b_public_data.yml'
   workflow_dispatch:
 
@@ -23,7 +24,7 @@ jobs:
       - name: Acquire immutable EPSS, KEV, and historical CVE context
         run: |
           set -euo pipefail
-          python tools/acquire_falcon_stage_b_public_data_v2.py --out falcon_stage_b_public_data
+          python tools/acquire_falcon_stage_b_public_data_v3.py --out falcon_stage_b_public_data
           python - <<'PY'
           import json
           from pathlib import Path
@@ -33,10 +34,12 @@ jobs:
           assert len(m['epss_records']) >= 40
           assert all(x['compact_rows'] >= 100000 for x in m['cve_context_records'])
           assert all(x['reconstruction'].startswith('prior-midnight') for x in m['cve_context_records'])
+          assert m['kev_record']['source_commit_committed_at'] > '2026-08-09'
           print(json.dumps({
               'context_files': len(m['cve_context_records']),
               'epss_files': len(m['epss_records']),
               'context_bytes': sum(x['compact_bytes'] for x in m['cve_context_records']),
+              'kev_commit_time': m['kev_record']['source_commit_committed_at'],
           }, sort_keys=True))
           PY
           tar -czf falcon_stage_b_public_data.tar.gz falcon_stage_b_public_data
