@@ -1,4 +1,4 @@
-"""Groupoid structure for federated learning transport maps."""
+"""Algebraic transport-map composition for GROUPOID."""
 
 from __future__ import annotations
 
@@ -9,10 +9,13 @@ from pydantic import BaseModel, ConfigDict
 
 
 class Morphism(BaseModel):
-    """A morphism in the transport groupoid.
+    """A matrix-labelled arrow between two nodes.
 
-    Represents a transport map between two nodes (clients) in the
-    federated learning network.
+    This container implements algebraic composition and inversion.  Its mere
+    construction does not certify that ``transport_map`` is a geometrically
+    valid action on a particular manifold representation.  The point-valued
+    aggregation pipeline imposes that stronger contract when matrices are
+    registered and exercised.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -24,9 +27,6 @@ class Morphism(BaseModel):
     def __repr__(self) -> str:
         return f"Morphism({self.source} -> {self.target})"
 
-    # pydantic's BaseModel defines __str__ separately (a field dump including
-    # the full transport matrix), which would bypass the compact __repr__ in
-    # print(), f-strings, and loguru's {} formatting. Alias it explicitly.
     __str__ = __repr__
 
 
@@ -34,28 +34,64 @@ class CompositionError(Exception):
     """Raised when morphism composition is not defined."""
 
 
-def compose(f: Morphism, g: Morphism) -> Morphism:
-    """Compose two morphisms f and g (f followed by g).
+class NonReciprocalTransportError(ValueError):
+    """Raised when opposite registered arrows violate the groupoid inverse law."""
 
-    Requires f.target == g.source (category composition law).
 
-    Parameters
-    ----------
-    f : Morphism
-        First morphism (applied first).
-    g : Morphism
-        Second morphism (applied second).
+def validate_reciprocal_transports(
+    forward: npt.NDArray[np.float64],
+    reverse: npt.NDArray[np.float64],
+    *,
+    source: str,
+    target: str,
+    rtol: float = 1e-9,
+    atol: float = 1e-10,
+) -> None:
+    """Require two explicitly supplied opposite arrows to be numerical inverses.
 
-    Returns
-    -------
-    Morphism
-        The composed morphism from f.source to g.target.
-
-    Raises
-    ------
-    CompositionError
-        If f.target != g.source.
+    GROUPOID permits storing either orientation of an underlying connection
+    edge. If callers explicitly store both ``source -> target`` and
+    ``target -> source``, they must represent the same groupoid edge and hence
+    satisfy the inverse law in both multiplication orders.
     """
+    forward_array = np.asarray(forward, dtype=float)
+    reverse_array = np.asarray(reverse, dtype=float)
+    if (
+        forward_array.ndim != 2
+        or reverse_array.ndim != 2
+        or forward_array.shape[0] != forward_array.shape[1]
+        or reverse_array.shape != forward_array.shape
+        or not np.all(np.isfinite(forward_array))
+        or not np.all(np.isfinite(reverse_array))
+    ):
+        raise NonReciprocalTransportError(
+            f"opposite transports {source}->{target} and {target}->{source} "
+            "must be finite square matrices of the same shape"
+        )
+
+    identity = np.eye(forward_array.shape[0])
+    with np.errstate(over="ignore", invalid="ignore"):
+        reverse_forward = reverse_array @ forward_array
+        forward_reverse = forward_array @ reverse_array
+    reciprocal = (
+        np.all(np.isfinite(reverse_forward))
+        and np.all(np.isfinite(forward_reverse))
+        and np.allclose(reverse_forward, identity, rtol=rtol, atol=atol)
+        and np.allclose(forward_reverse, identity, rtol=rtol, atol=atol)
+    )
+    if not reciprocal:
+        residual = max(
+            float(np.linalg.norm(reverse_forward - identity, ord="fro")),
+            float(np.linalg.norm(forward_reverse - identity, ord="fro")),
+        )
+        raise NonReciprocalTransportError(
+            f"opposite transports {source}->{target} and {target}->{source} "
+            f"are not mutual numerical inverses (max Frobenius residual={residual:.3e})"
+        )
+
+
+def compose(f: Morphism, g: Morphism) -> Morphism:
+    """Compose two morphisms ``f`` then ``g``."""
     if f.target != g.source:
         raise CompositionError(f"Cannot compose: {f.target} != {g.source}")
 
@@ -69,17 +105,11 @@ def compose(f: Morphism, g: Morphism) -> Morphism:
 
 
 def inverse(f: Morphism) -> Morphism:
-    """Compute the inverse of a morphism.
+    """Return the matrix inverse of a morphism.
 
-    Parameters
-    ----------
-    f : Morphism
-        The morphism to invert.
-
-    Returns
-    -------
-    Morphism
-        The inverse morphism from f.target to f.source.
+    ``numpy.linalg.LinAlgError`` is raised if the stored matrix is singular.
+    Geometric validity of the inverse as a manifold point action is a separate
+    contract enforced by the aggregation layer when such an action is used.
     """
     logger.debug("Inverting {}", f)
     inv_map = np.linalg.inv(f.transport_map)

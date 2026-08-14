@@ -10,16 +10,17 @@
 > **Pre-alpha research prototype.** This is an early-stage exploration of
 > groupoid-based aggregation for federated learning on Riemannian manifolds.
 > It is not a production federated learning system. See
-> [STATUS.md](STATUS.md) and [LIMITATIONS.md](LIMITATIONS.md).
+> [STATUS.md](STATUS.md), [LIMITATIONS.md](LIMITATIONS.md), and
+> [CORRECTION_NOTICE.md](CORRECTION_NOTICE.md).
 
 ## Overview
 
 GROUPOID explores using transport groupoids, cellular sheaves, and
 Riemannian geometry to aggregate model parameters across heterogeneous
 federated clients. The core idea: instead of naive Euclidean averaging
-(FedAvg), transport client parameters to a common frame via groupoid
-morphisms, check cohomological consistency, and compute the intrinsic
-Karcher mean on the parameter manifold.
+(FedAvg), transport client parameters to a common frame via explicit
+point-action morphisms, evaluate cycle-holonomy consistency, and compute the
+intrinsic Karcher mean on the parameter manifold.
 
 ## Implemented and tested
 
@@ -29,30 +30,35 @@ integration tests:
 - **Karcher mean** on Riemannian manifolds via geomstats (`groupoid.manifold`)
 - **Transport groupoid**: morphism composition, inverse, composition
   associativity verified by Hypothesis (`groupoid.groupoid`)
-- **First cohomology H^1**: holonomy-based obstruction detection on the
-  cycle basis; coboundary vanishing and a multi-cycle independent
-  holonomy-product reference tested; an incompletely specified cocycle
-  (a cycle with a missing edge map) raises `IncompleteCocycleError`
-  rather than reporting a partial-product false positive
-  (`groupoid.cohomology`)
+- **Cycle-basis holonomy defect**: `cycle_basis_holonomy_defect` computes
+  `max_{gamma in B} ||Hol(gamma) - I||_F` over the NetworkX cycle basis.
+  Exact vanishing has a flatness interpretation under explicit assumptions,
+  while the nonzero magnitude is basis- and representation-dependent. The
+  historical `compute_h1` name is retained as a deprecated compatibility
+  alias; the scalar is not a canonical H^1 norm. An incompletely specified
+  basis cycle raises `IncompleteCocycleError`; conflicting explicitly supplied
+  opposite arrows raise `NonReciprocalTransportError` (`groupoid.cohomology`)
 - **Cellular sheaf**: restriction maps with functoriality tested
   (`groupoid.sheaf`)
 - **Sheaf Laplacian**: connection Laplacian L = delta^T delta; PSD and
   delta^T-delta equality verified on non-orthogonal restriction maps, plus
   spectral analysis, algebraic connectivity, and diffusion convergence
   tested (`groupoid.laplacian`)
-- **Federated aggregation pipeline**: transport-aware aggregation with
-  H^1 consistency checking, multi-round convergence tested
-  (`groupoid.aggregation`)
+- **Federated aggregation pipeline**: point-valued aggregation through
+  explicit invertible point actions, with a cycle-basis holonomy-defect
+  threshold diagnostic and multi-round convergence tested. The current S^2
+  evidence validates explicit SO(3) point actions (`groupoid.aggregation`)
 - **Parallel transport**: Schild's ladder and pole ladder
-  (`groupoid.transport`), wired into the pipeline via
-  `TransportGroupoidAggregator.register_transport_from_points` (computes
-  and registers the transport matrix from two client base points). The
-  pole ladder is validated against geomstats' analytic parallel transport
-  on S^2 -- it matches in direction (cosine > 0.999) and magnitude.
-  Schild's ladder is a coarser first-order approximation and is asserted
-  as such. See [LIMITATIONS.md](LIMITATIONS.md) for the convergence
-  caveat.
+  (`groupoid.transport`) are tangent-vector transport utilities. Pole ladder
+  is validated against geomstats' analytic tangent-vector parallel transport
+  on S^2 -- it matches in direction (cosine > 0.999) and magnitude. Schild's
+  ladder is a coarser first-order approximation and is asserted as such. The
+  former `register_transport_from_points` point-valued integration is
+  withdrawn because tangent parallel transport does not by itself define the
+  invertible point action required by the aggregator. The ambient tangent
+  matrix helper is restricted to 1D coordinate-array point representations. See
+  [CORRECTION_NOTICE.md](CORRECTION_NOTICE.md) and
+  [LIMITATIONS.md](LIMITATIONS.md)
 - **Persistent homology**: Vietoris-Rips filtration for divergence
   tracking (`groupoid.persistence`), wired into the pipeline via the
   aggregator's opt-in `track_divergence` flag (per-round H0-vs-H0
@@ -90,8 +96,8 @@ Pre-alpha. See [STATUS.md](STATUS.md) for details.
 
 GROUPOID sits at the intersection of three existing toolchains and is not a
 replacement for any of them. It is an exploratory prototype of one specific
-idea -- transport-groupoid aggregation with cohomological consistency checking
--- not a federated learning framework.
+idea -- transport-groupoid aggregation with a cycle-holonomy consistency
+diagnostic -- not a federated learning framework.
 
 - **Flower / FedML / TensorFlow Federated** -- mature federated learning
   frameworks providing the client/server communication, orchestration, and
@@ -103,7 +109,7 @@ idea -- transport-groupoid aggregation with cohomological consistency checking
 - **geomstats / pymanopt** -- Riemannian-geometry libraries. GROUPOID *uses*
   geomstats for the manifold primitives (the Karcher mean delegates to
   geomstats `FrechetMean`). What GROUPOID adds on top is the transport
-  groupoid, the H^1 holonomy/consistency check, and the cellular-sheaf
+  groupoid, the cycle-basis holonomy diagnostic, and the cellular-sheaf
   Laplacian wiring -- not the manifold geometry itself.
 - **Cellular-sheaf spectral methods** (the sheaf-Laplacian line of work,
   e.g. Hansen and Ghrist's spectral theory of cellular sheaves, and sheaf
@@ -113,15 +119,16 @@ idea -- transport-groupoid aggregation with cohomological consistency checking
   the sheaf-Laplacian construction in the abstract.
 
 In short: use Flower/FedML/TFF for the FL system, use geomstats/pymanopt for
-manifold math; GROUPOID is a research prototype testing whether combining a
-transport groupoid with sheaf-cohomological consistency yields a better
-aggregation operator than Euclidean FedAvg. A preregistered synthetic
-benchmark ([experiments/](experiments/)) supports the transport benefit
-under frame misalignment -- an effect largely built into the synthetic
-setup -- and shows the pooled H^1 norm tracks corruption-induced error
-across corruption levels, though it does not rank runs within a level.
-The hypothesis remains **unvalidated on real federated learning tasks**
-(see [STATUS.md](STATUS.md)).
+manifold math; GROUPOID is a research prototype testing a transport-groupoid
+aggregation operator against Euclidean FedAvg. A preregistered synthetic
+benchmark ([experiments/](experiments/)) supports the transport benefit under
+frame misalignment -- an effect largely built into the synthetic setup -- and
+shows that the fixed NetworkX cycle-basis holonomy defect is associated with
+aggregation error when the two corruption levels are pooled (Spearman rho =
+0.587, permutation p = 1e-4). The within-level correlations are near zero, so
+the statistic does not rank runs by error within a fixed corruption level. The
+hypothesis remains **unvalidated on real federated learning tasks** (see
+[STATUS.md](STATUS.md)).
 
 ## Installation
 
@@ -159,7 +166,7 @@ aggregator = TransportGroupoidAggregator(
     manifold=manifold, graph=graph, base_node="A"
 )
 
-# Register rotation matrices as transport maps
+# Register SO(3) point actions.
 theta = np.pi / 6
 R = np.array([
     [np.cos(theta), -np.sin(theta), 0],
@@ -177,7 +184,10 @@ client_params = {
 client_params = {k: v / np.linalg.norm(v) for k, v in client_params.items()}
 
 result = aggregator.aggregate(client_params)
-print(f"H^1 = {result.h1_norm:.2e} (consistent: {result.is_consistent})")
+print(
+    f"cycle-basis defect = {result.cycle_basis_holonomy_defect:.2e} "
+    f"(below configured threshold: {result.passes_consistency_threshold})"
+)
 ```
 
 ## Running tests

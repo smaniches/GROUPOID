@@ -40,7 +40,9 @@ test that fails on the pre-fix code.
    formed a partial product and could report a false (in)consistency. `compute_h1`
    now raises `IncompleteCocycleError` naming the missing edge, and a
    disconnected-graph transport request is re-raised as an explicit domain error
-   rather than producing a silent wrong answer.
+   rather than producing a silent wrong answer. The later dev5 correction below
+   supersedes the interpretation of `compute_h1` itself: the scalar is a
+   cycle-basis holonomy defect, not a canonical H^1 norm.
 
 4. **Schild's ladder implementation was incorrect; test tolerances were too loose
    (fixed in commit `21e782c`).** The parallel-transport approximation was corrected
@@ -56,12 +58,37 @@ test that fails on the pre-fix code.
    projection, not parallel transport (fixed in commit `5371c20`).** Adam's first
    moment was projected onto each new tangent space and the SGD momentum velocity
    was not moved at all. Projection loses the component normal to the new tangent
-   space — a geodesic-aligned moment can be annihilated outright — and an
-   untransported moment is not even tangent at the new iterate. Both accumulators
-   are now parallel-transported (the Becigneul–Ganea construction), with tangent
-   projection kept only as a fallback for metrics lacking parallel transport. The
-   regression tests discriminate transport from projection by exact norm
-   preservation at a point where projection would give zero.
+   space, and an untransported moment is not tangent at the new iterate. Both
+   accumulators are now parallel-transported, with tangent projection kept only as
+   a fallback for metrics lacking parallel transport.
+
+7. **The cycle-basis holonomy defect was misidentified as an H^1 cohomology norm
+   (corrected in the dev5 scientific correction).** The implementation computes
+   `max ||Hol(gamma)-I||_F` over the specific `networkx.cycle_basis` returned for
+   the undirected graph. Exact zero has a valid flatness interpretation under
+   explicit connectedness, complete invertible underlying-edge transport,
+   reciprocal opposite registrations when both directions are supplied, and
+   fundamental-cycle assumptions, but the nonzero magnitude depends on the
+   chosen cycle basis and
+   is not invariant under arbitrary invertible changes of frame. The historical
+   benchmark numbers are retained; H2 is reinterpreted as a correlation with this
+   fixed cycle-basis defect rather than with a canonical cohomology norm.
+
+8. **A tangent-vector transport operator was incorrectly promoted into an
+   invertible point action (corrected in the dev5 scientific correction).**
+   `compute_transport_matrix` assembled an ambient square array by projecting
+   ambient basis vectors into a tangent space and transporting those tangent
+   vectors. `register_transport_from_points` then registered that array as the
+   same point-valued morphism used by aggregation. For an embedded manifold such
+   as S^2, the exact projector extension is rank-deficient in ambient coordinates
+   and does not define the required point action. The tangent ladder utilities
+   remain valid at their tested scope; the from-points integration is withdrawn
+   and now fails closed. Direct registered matrices are supported only under an
+   explicit invertible manifold point-action contract, including reciprocal
+   opposite arrows when both directions are stored. The ambient tangent matrix
+   helper is supported only for vector-shaped point representations. The
+   preregistered benchmark is unaffected because it registers explicit SO(3)
+   rotations directly.
 
 ## Known mathematical limitations (not bugs — documented honestly)
 
@@ -69,10 +96,10 @@ From `LIMITATIONS.md`; recorded here so absence of a guarantee is never mistaken
 for an oversight:
 
 - **Pole ladder does not converge to zero error.** It matches geomstats' analytic
-  parallel transport closely in direction (cosine > 0.999 on a 60-degree S^2 hop)
-  but plateaus at a small residual (~0.02 here) and drifts slightly off the
-  endpoint tangent plane as rungs increase. Schild's ladder is markedly coarser
-  (cosine ~0.98 on the same hop).
+  tangent-vector parallel transport closely in direction (cosine > 0.999 on a
+  60-degree S^2 hop) but plateaus at a small residual (~0.02 here) and drifts
+  slightly off the endpoint tangent plane as rungs increase. Schild's ladder is
+  markedly coarser (cosine ~0.98 on the same hop).
 - **Persistent-homology Betti numbers are degenerate under the default filtration.**
   `compute_persistence` counts only bars dying at infinity, so under the default
   `thresh=inf` (used by `track_divergence`) the Vietoris-Rips complex is fully
@@ -81,9 +108,11 @@ for an oversight:
   component counts require a finite `max_edge_length` between the intra- and
   inter-cluster scales.
 - **Sheaf Laplacian assumes uniform stalk dimension.**
-- **H^1 uses the cycle basis of the undirected graph.** Correct for 1-dimensional
-  nerve complexes; does not generalize to higher-dimensional simplicial complexes
-  without modification.
+- **The cycle-basis holonomy-defect magnitude is noncanonical.** It depends on the
+  selected basis and, outside orthogonal/unitary representations, on the chosen
+  frame. The finite consistency threshold is therefore representation-dependent.
+- **A zero cycle-basis defect is not a completeness check.** Bridges lie on no
+  cycles, and disconnected components require separate handling.
 
 ## Not implemented at this stage (by design)
 
@@ -98,20 +127,20 @@ From `STATUS.md`; stated plainly so the scope is unambiguous:
   S^2** (SGD, momentum SGD, Adam) with parallel-transported moment accumulators,
   but no general convergence-rate analysis exists and the module is not yet
   integrated into the aggregation pipeline. (100% line+branch coverage is not the
-  same as validation — see `STATUS.md`.)
+  same as validation; see `STATUS.md`.)
+- No generic construction is currently supplied that turns Levi-Civita tangent
+  parallel transport on an arbitrary Riemannian manifold into the invertible point
+  action required by the current point-valued aggregator.
 
 ## Honest epistemic statement
 
-GROUPOID is a pre-alpha research prototype. Its tested mathematical primitives
-(groupoid composition, Karcher mean, H^1 cohomology, the sheaf Laplacian) are
-validated against independent ground truth and covered by a hard, CI-enforced 100%
-line+branch test gate; the parallel-transport and persistence modules are validated
-against analytic / known-topology references and are wired into the aggregation
-pipeline. The central scientific hypothesis — that groupoid transport + cohomological
-consistency + the intrinsic Karcher mean improve on Euclidean averaging for
-heterogeneous federated clients — is supported by a preregistered synthetic
-benchmark (`experiments/`) in which the frame-misalignment benefit is largely
-built into the data-generating process, and remains **unvalidated on real
-federated learning tasks**; `README.md` and `STATUS.md` state this precisely. The mathematical bugs above were caught before the corrected code was
-archived, and each is guarded by a regression test. The repository aims to be exact
-about what has and has not been demonstrated.
+GROUPOID is a pre-alpha research prototype. Its validated claims are deliberately
+narrow. Groupoid matrix composition, the Karcher mean, the sheaf Laplacian, the
+cycle-basis holonomy defect at its stated scope, and tangent-vector transport
+utilities have direct tests against algebraic, analytic, or constructed reference
+cases. The point-valued aggregation pipeline is supported for explicit point
+actions that satisfy its runtime manifold contract; the current S^2 evidence uses
+SO(3) rotations. The central scientific hypothesis remains supported only by the
+preregistered synthetic benchmark and remains **unvalidated on real federated
+learning tasks**. Historical preregistration and result artifacts are preserved;
+current interpretation corrections are documented in `CORRECTION_NOTICE.md`.

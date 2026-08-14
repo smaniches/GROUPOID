@@ -8,19 +8,50 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.1.0.dev5]
+
+Scientific correction release. See `CORRECTION_NOTICE.md` for the evidence and
+scope. Historical preregistration and result artifacts are preserved unchanged.
+
 ### Fixed
-- **Release automation did not actually fire**: `auto-tag-release.yml`
-  (added in 0.1.0.dev4) pushed the release tag using the workflow's
-  default `GITHUB_TOKEN` and assumed that push would trigger
-  `release.yml`. GitHub suppresses push-triggered workflow runs caused
-  by a `GITHUB_TOKEN`-authored push, so it never did: the `v0.1.0.dev4`
-  tag was created but no build, PyPI publish, signing, GitHub Release,
-  or Zenodo deposit ever happened. `auto-tag-release.yml` now explicitly
-  dispatches `release.yml` via `gh workflow run` (`workflow_dispatch` is
-  the documented exception to that suppression) with a new
-  `create_github_release` input so the dispatched run also signs and
-  creates the GitHub Release, not just publishes to PyPI. See the
-  "Releasing" section of `CONTRIBUTING.md`.
+- **The former `H^1` scalar is now identified by the quantity actually
+  computed.** `cycle_basis_holonomy_defect` returns
+  `max_{gamma in B} ||Hol(gamma) - I||_F` over the NetworkX cycle basis. The
+  historical `compute_h1` name remains as a deprecated compatibility alias.
+  The exact zero set has a flatness interpretation under explicit connected,
+  complete, invertible fundamental-cycle assumptions, but the nonzero
+  magnitude is cycle-basis-dependent and is not invariant under arbitrary
+  invertible changes of frame. Finite threshold decisions are therefore
+  representation-dependent diagnostics, not canonical cohomological verdicts.
+- **Tangent-vector transport is no longer promoted into an unsupported
+  point-valued morphism.** `compute_tangent_transport_matrix` now names the
+  ambient-coordinate tangent operator explicitly. The old
+  `compute_transport_matrix` name remains as a deprecated alias.
+  `register_transport_from_points` is retained only as a compatibility stub
+  and fails closed because tangent parallel transport does not by itself define
+  the invertible point action required by the current aggregator.
+- **Direct transport registration now states and checks the point-action
+  contract exercised by aggregation.** Registered matrices must be finite,
+  square and invertible, and actual forward and return images must remain on
+  the configured manifold. This validates exercised point actions, not
+  arbitrary matrices as generic geometric transports. The supported S^2
+  evidence continues to use explicit SO(3) rotations.
+- **Benchmark H2 interpretation corrected without changing its historical
+  numerical result.** The committed rho=0.587 and permutation p=0.00010 are
+  retained as the association between aggregation error and the fixed
+  cycle-basis holonomy-defect statistic across pooled corruption levels; the
+  near-zero within-level correlations remain an explicit caveat.
+- **Preregistration provenance language calibrated.** Current explanatory
+  documentation distinguishes Git commit-order evidence from the separate
+  project-record assertion that the preregistration was pushed before local
+  benchmark execution. The locked preregistration is unchanged.
+- **Release automation now explicitly dispatches the release workflow after
+  creating a tag.** The initial 0.1.0.dev4 auto-tag path used the workflow
+  `GITHUB_TOKEN`; the resulting tag push did not trigger the tag-push release
+  workflow. The 0.1.0.dev4 GitHub Release was subsequently produced after a
+  manual workflow run. The current auto-tag workflow explicitly dispatches
+  `release.yml` so future automated release cuts do not rely on a suppressed
+  bot-authored push event.
 
 ## [0.1.0.dev4] - 2026-07-06
 
@@ -166,7 +197,8 @@ Date shown is the tag commit (`v0.1.0.dev0` -> 2a02954). `CITATION.cff` records
 `date-released: 2026-05-25`, when the core implementation landed; the tag was
 later placed on the metadata commit.
 
-[Unreleased]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev4...HEAD
+[Unreleased]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev5...HEAD
+[0.1.0.dev5]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev4...v0.1.0.dev5
 [0.1.0.dev4]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev2...v0.1.0.dev4
 [0.1.0.dev3]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev2...af42cb4
 [0.1.0.dev2]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev1...v0.1.0.dev2
