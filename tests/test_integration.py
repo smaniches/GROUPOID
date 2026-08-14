@@ -82,8 +82,7 @@ class TestFederatedPipeline:
         assert len(result.local_updates) == 4
         assert self.manifold.belongs(result.global_params, atol=1e-4)
         assert all(
-            self.manifold.belongs(point, atol=1e-4)
-            for point in result.local_updates.values()
+            self.manifold.belongs(point, atol=1e-4) for point in result.local_updates.values()
         )
 
         for node, local_point in result.local_updates.items():
@@ -162,7 +161,8 @@ class TestFederatedPipeline:
         assert weighted.passes_consistency_threshold
         assert self.manifold.belongs(weighted.global_params, atol=1e-4)
         assert np.dot(weighted.global_params, params["A"]) > np.dot(
-            unweighted.global_params, params["A"]
+            unweighted.global_params,
+            params["A"],
         )
 
     def test_nonzero_cycle_defect_flags_threshold(self):
