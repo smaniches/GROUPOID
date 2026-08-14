@@ -250,9 +250,7 @@ class TransportGroupoidAggregator:
 
         return composite.transport_map if composite is not None else None
 
-    def check_consistency(
-        self, client_params: dict[str, npt.NDArray[np.float64]]
-    ) -> float:
+    def check_consistency(self, client_params: dict[str, npt.NDArray[np.float64]]) -> float:
         """Return the current cycle-basis holonomy defect.
 
         ``client_params`` is retained in the signature for API compatibility;
@@ -261,9 +259,7 @@ class TransportGroupoidAggregator:
         bridge transports are present, or that the matrices define valid point
         actions.
         """
-        transport_maps = {
-            (m.source, m.target): m.transport_map for m in self.morphisms.values()
-        }
+        transport_maps = {(m.source, m.target): m.transport_map for m in self.morphisms.values()}
         defect = cycle_basis_holonomy_defect(self.graph, transport_maps)
         logger.info("Cycle-basis holonomy defect = {:.2e}", defect)
         return defect

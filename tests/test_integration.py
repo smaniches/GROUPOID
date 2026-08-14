@@ -162,8 +162,7 @@ class TestFederatedPipeline:
         assert weighted.passes_consistency_threshold
         assert self.manifold.belongs(weighted.global_params, atol=1e-4)
         assert np.dot(weighted.global_params, params["A"]) > np.dot(
-            unweighted.global_params,
-            params["A"],
+            unweighted.global_params, params["A"]
         )
 
     def test_nonzero_cycle_defect_flags_threshold(self):

@@ -45,9 +45,7 @@ def test_primary_defect_zero_on_complete_coboundary_and_legacy_alias_matches():
         "B": rotation_z(0.4),
         "C": rotation_z(-0.2),
     }
-    transports = {
-        (u, v): gauges[v] @ np.linalg.inv(gauges[u]) for u, v in graph.edges()
-    }
+    transports = {(u, v): gauges[v] @ np.linalg.inv(gauges[u]) for u, v in graph.edges()}
 
     defect = cycle_basis_holonomy_defect(graph, transports)
     assert defect < 1e-12
@@ -115,9 +113,7 @@ def test_zero_cycle_defect_does_not_certify_bridge_completeness():
 
 
 def test_nonreciprocal_dual_edge_is_rejected_before_cycle_reduction():
-    graph = nx.DiGraph(
-        [("A", "B"), ("B", "A"), ("B", "C"), ("A", "C")]
-    )
+    graph = nx.DiGraph([("A", "B"), ("B", "A"), ("B", "C"), ("A", "C")])
     transports = {
         ("A", "B"): np.eye(2),
         ("B", "A"): 2.0 * np.eye(2),
@@ -193,10 +189,7 @@ def test_exact_tangent_projector_extension_is_singular(monkeypatch):
 
 
 def fake_sphere_mean(manifold, points, weights=None, **_kwargs):
-    if weights is None:
-        mean = points.mean(axis=0)
-    else:
-        mean = np.average(points, axis=0, weights=weights)
+    mean = points.mean(axis=0) if weights is None else np.average(points, axis=0, weights=weights)
     return mean / np.linalg.norm(mean)
 
 
@@ -464,6 +457,7 @@ def test_ladder_branches_execute_as_tangent_vector_utilities():
         n_rungs=2,
     )
     assert operator.shape == (2, 2)
+
 
 class MatrixPointManifold:
     def to_tangent(self, vector: np.ndarray, point: np.ndarray) -> np.ndarray:
