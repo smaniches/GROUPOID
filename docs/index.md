@@ -1,30 +1,30 @@
 # GROUPOID
 
 > **Pre-alpha research prototype.** Not production software.
-> See [STATUS](https://github.com/smaniches/GROUPOID/blob/main/STATUS.md)
-> and [LIMITATIONS](https://github.com/smaniches/GROUPOID/blob/main/LIMITATIONS.md).
+> See [STATUS](https://github.com/smaniches/GROUPOID/blob/main/STATUS.md),
+> [LIMITATIONS](https://github.com/smaniches/GROUPOID/blob/main/LIMITATIONS.md),
+> and [CORRECTION_NOTICE](https://github.com/smaniches/GROUPOID/blob/main/CORRECTION_NOTICE.md).
 
 **Groupoid-based aggregation for federated learning on Riemannian manifolds.**
 
 GROUPOID explores using the mathematical structure of transport groupoids,
 cellular sheaves, and Riemannian geometry to aggregate model parameters
-across heterogeneous federated clients. The central hypothesis is that
-geometry-aware aggregation (Karcher mean with parallel transport) can
-outperform naive Euclidean averaging when client parameter spaces are
-heterogeneous, and that cohomological invariants (H^1) can diagnose
-irreconcilable model divergence before it degrades performance.
+across heterogeneous federated clients. The current supported aggregation
+path uses explicit invertible point actions and a Karcher mean. Its transport
+consistency diagnostic is a cycle-basis holonomy defect, not a canonical H^1
+norm; see the correction notice for the exact construct and assumptions.
 
 ## Implemented and tested
 
 | Module | Description | Test coverage |
 |---|---|---|
 | `groupoid.manifold` | Karcher mean via geomstats FrechetMean | Hypothesis (500 examples) |
-| `groupoid.groupoid` | Morphism composition, inverse | Hypothesis (500 examples) |
-| `groupoid.cohomology` | H^1 via cycle-basis holonomy | Hypothesis (500 examples) |
+| `groupoid.groupoid` | Matrix-labelled morphism composition, inverse | Hypothesis (500 examples) |
+| `groupoid.cohomology` | Cycle-basis holonomy defect; deprecated `compute_h1` compatibility alias | Coboundary zero, analytic nonzero cases, same-basis reference, basis/gauge regressions, reciprocal-edge invariant |
 | `groupoid.sheaf` | Cellular sheaf, restriction maps | Hypothesis (500 examples) |
 | `groupoid.laplacian` | Sheaf Laplacian, spectral analysis, diffusion | Unit: PSD + delta^T-delta equality on non-orthogonal maps, transport-consistent kernel; Integration: spectral analysis, diffusion |
-| `groupoid.aggregation` | Transport-aware federated aggregation pipeline | Integration tests |
-| `groupoid.transport` | Schild's ladder, pole ladder parallel transport; wired into the pipeline via `register_transport_from_points` | Unit: pole ladder matches geomstats analytic parallel transport in direction (cosine > 0.999) and magnitude on S^2; Schild's ladder asserted as a coarser approximation. Integration: computed transports validated against analytic transport and end-to-end through `aggregate()` |
+| `groupoid.aggregation` | Point-valued aggregation using explicit invertible point actions | Integration: explicit SO(3) forward/return actions and manifold preservation |
+| `groupoid.transport` | Schild and pole ladder tangent-vector parallel transport | Unit: pole ladder matches geomstats analytic tangent transport in direction (cosine > 0.999) and magnitude on S^2; ambient matrix helper restricted to vector-shaped points; point-valued `register_transport_from_points` integration withdrawn |
 | `groupoid.persistence` | Vietoris-Rips persistent homology; wired into the pipeline via the aggregator's opt-in `track_divergence` flag | Unit: circle 1-cycle via max persistence, two-cluster component count at a finite filtration, translation-invariant bottleneck. Dimension-aware: diagram retains an H0/H1 label and `track_divergence` compares H0-vs-H0 only, verified against an independent MST reconstruction of the H0 diagram and shown not to leak an H1-only change into the H0 divergence. Integration: zero bottleneck on identical rounds, positive on a client jump. Betti degeneracy at thresh=inf documented in LIMITATIONS |
 
 ## Implemented and validated, not yet integrated
@@ -64,7 +64,7 @@ Client C ---T_CD---> Client D
          /        \
         /          \
    global model -> local updates
-   (via inverse transport)
+   (via inverse point action)
 ```
 
 ## Installation
@@ -116,7 +116,10 @@ client_params = {
 client_params = {k: v / np.linalg.norm(v) for k, v in client_params.items()}
 
 result = aggregator.aggregate(client_params)
-print(f"H^1 = {result.h1_norm:.2e} (consistent: {result.is_consistent})")
+print(
+    f"cycle-basis defect = {result.cycle_basis_holonomy_defect:.2e} "
+    f"(below threshold: {result.passes_consistency_threshold})"
+)
 ```
 
 ## License

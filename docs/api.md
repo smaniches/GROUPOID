@@ -6,6 +6,10 @@
 
 ::: groupoid.aggregation.FederatedRound
 
+::: groupoid.aggregation.InvalidPointTransportError
+
+::: groupoid.aggregation.UnsupportedTransportRepresentationError
+
 ## Manifold Operations
 
 ::: groupoid.manifold.karcher_mean
@@ -18,7 +22,13 @@
 
 ::: groupoid.groupoid.inverse
 
-## Cohomology
+::: groupoid.groupoid.NonReciprocalTransportError
+
+## Cycle Holonomy Diagnostic
+
+::: groupoid.cohomology.cycle_basis_holonomy_defect
+
+### Deprecated compatibility alias
 
 ::: groupoid.cohomology.compute_h1
 
@@ -34,11 +44,15 @@
 
 ::: groupoid.laplacian.sheaf_diffusion_step
 
-## Parallel Transport
+## Tangent-Vector Parallel Transport
 
 ::: groupoid.transport.schild_ladder
 
 ::: groupoid.transport.pole_ladder
+
+::: groupoid.transport.compute_tangent_transport_matrix
+
+### Deprecated compatibility alias
 
 ::: groupoid.transport.compute_transport_matrix
 

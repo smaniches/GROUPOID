@@ -1,17 +1,11 @@
-"""Federated aggregation via groupoid transport and Karcher mean.
+"""Federated aggregation via explicit point actions and a Karcher mean.
 
-This module ties together the transport groupoid, sheaf consistency,
-and Riemannian aggregation into a complete federated learning round.
-The key insight is that naive parameter averaging fails when client
-models live on different tangent spaces. Instead, we:
-
-1. Transport all client parameters to a common base point via the
-   groupoid morphisms.
-2. Check cohomological consistency (H^1) to detect irreconcilable
-   disagreements before aggregation.
-3. Compute the Karcher mean on the manifold of the transported
-   parameters.
-4. Transport the aggregated model back to each client's local frame.
+The aggregation pipeline treats ``client_params`` as manifold-valued points.
+Caller-supplied transport matrices must therefore define invertible linear
+point actions in the chosen representation and must preserve the admissible
+manifold points that the pipeline actually transports.  Tangent-vector parallel
+transport is a different mathematical object and is not promoted into this
+point-action contract automatically.
 """
 
 from __future__ import annotations
@@ -24,33 +18,38 @@ import numpy.typing as npt
 from loguru import logger
 
 from groupoid import persistence as _persistence
-from groupoid.cohomology import compute_h1
-from groupoid.groupoid import Morphism, compose, inverse
+from groupoid.cohomology import cycle_basis_holonomy_defect
+from groupoid.groupoid import (
+    Morphism,
+    compose,
+    inverse,
+    validate_reciprocal_transports,
+)
 from groupoid.manifold import karcher_mean
-from groupoid.transport import compute_transport_matrix
 
 
 class DisconnectedClientGraphError(Exception):
-    """Raised when the client graph has no transport path to the base node.
+    """Raised when the client graph has no transport path to the base node."""
 
-    Aggregation transports every client's parameters to the base node along
-    a path in the client graph. If a client lies in a different connected
-    component from the base node, no such path exists and the parameters
-    cannot be aligned. This error replaces the raw networkx
-    ``NetworkXNoPath`` with a domain-meaningful message naming the
-    unreachable node and the base.
-    """
+
+class InvalidPointTransportError(ValueError):
+    """Raised when a registered matrix cannot serve as the required point action."""
+
+
+class UnsupportedTransportRepresentationError(RuntimeError):
+    """Raised when tangent transport is requested as a point-valued morphism."""
 
 
 @dataclass
 class FederatedRound:
     """Result of a single federated aggregation round.
 
-    ``divergence`` is populated only when the aggregator was constructed
-    with ``track_divergence=True``: it is the persistent-homology summary
-    of the transported client parameters, with the bottleneck distance to
-    the previous round's summary (None on the first round with tracking
-    off; see :func:`groupoid.persistence.track_divergence`).
+    ``h1_norm``, ``is_consistent``, and ``transport_residuals`` are retained
+    as compatibility field names. ``h1_norm`` stores the cycle-basis holonomy
+    Frobenius defect, not a canonical H^1 norm. ``is_consistent`` means only
+    that this representation-dependent defect is below the configured numerical
+    threshold. ``transport_residuals`` stores ``||T T^T - I||_F`` for the
+    composite forward maps, so its precise meaning is an orthogonality defect.
     """
 
     global_params: npt.NDArray[np.float64]
@@ -61,33 +60,37 @@ class FederatedRound:
     round_idx: int = 0
     divergence: _persistence.PersistenceSummary | None = None
 
+    @property
+    def cycle_basis_holonomy_defect(self) -> float:
+        """Primary name for the scalar stored in the legacy ``h1_norm`` field."""
+        return self.h1_norm
+
+    @property
+    def passes_consistency_threshold(self) -> bool:
+        """Whether the defect is below the configured representation-specific threshold."""
+        return self.is_consistent
+
+    @property
+    def orthogonality_residuals(self) -> dict[str, float]:
+        """Primary name for the legacy ``transport_residuals`` values."""
+        return self.transport_residuals
+
 
 @dataclass
 class TransportGroupoidAggregator:
-    """Federated aggregator using groupoid transport and Riemannian geometry.
+    """Federated aggregator using explicit invertible point actions.
 
-    Given a network of clients with local model parameters on a Riemannian
-    manifold, this aggregator:
-    - Uses parallel transport (groupoid morphisms) to align parameters
-    - Checks cohomological consistency before aggregation
-    - Computes intrinsic Karcher mean on the parameter manifold
-    - Distributes the result back via inverse transport
+    The current point-valued aggregation path is scientifically supported for
+    caller-supplied matrices that act invertibly on the chosen point
+    representation and preserve the manifold domain used by the Karcher mean.
+    The preregistered S^2 benchmark exercises this contract with explicit
+    SO(3) rotations.  Arbitrary square matrices are not thereby validated as
+    geometric transport morphisms.
 
-    Parameters
-    ----------
-    manifold
-        A geomstats manifold instance for the parameter space.
-    graph
-        Directed graph of the client network.
-    base_node
-        The node to which all parameters are transported for aggregation.
-    consistency_threshold
-        Maximum H^1 norm before raising a consistency warning.
-    track_divergence
-        When True, each :meth:`aggregate` round computes the persistent
-        homology of the transported client parameters and the bottleneck
-        distance to the previous round (H0 against H0), populating
-        ``FederatedRound.divergence``.
+    ``consistency_threshold`` is a threshold on the basis-dependent holonomy
+    defect.  A finite threshold decision is not invariant under general
+    non-orthogonal changes of frame; it must not be interpreted as a canonical
+    cohomological verdict.
     """
 
     manifold: object
@@ -104,13 +107,59 @@ class TransportGroupoidAggregator:
     def register_transport(
         self, source: str, target: str, matrix: npt.NDArray[np.float64]
     ) -> None:
-        """Register a transport map between two clients."""
+        """Register an invertible candidate point action between two clients.
+
+        Registration establishes only the algebraic prerequisites that can be
+        checked without seeing a point: a finite square matrix with a finite
+        inverse. If the opposite orientation is already registered, the two
+        matrices must also satisfy the groupoid inverse law numerically. During
+        aggregation the actual forward and return actions are required to map
+        the transported points back onto ``self.manifold``. Passing these checks
+        validates the exercised point actions, not every possible manifold point.
+        """
+        candidate = np.asarray(matrix, dtype=float)
+        if candidate.ndim != 2 or candidate.shape[0] != candidate.shape[1]:
+            raise InvalidPointTransportError(
+                f"transport {source}->{target} must be a square matrix; "
+                f"got shape {candidate.shape}"
+            )
+        if not np.all(np.isfinite(candidate)):
+            raise InvalidPointTransportError(
+                f"transport {source}->{target} contains non-finite values"
+            )
+        try:
+            with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+                candidate_inverse = np.linalg.inv(candidate)
+        except np.linalg.LinAlgError as exc:
+            raise InvalidPointTransportError(
+                f"transport {source}->{target} is singular and cannot define "
+                "the inverse point action required by aggregation"
+            ) from exc
+        if not np.all(np.isfinite(candidate_inverse)):
+            raise InvalidPointTransportError(
+                f"transport {source}->{target} has a non-finite numerical inverse "
+                "and cannot define the return point action required by aggregation"
+            )
+
+        if source != target:
+            # For a self-loop the ``(target, source)`` key is this same arrow,
+            # so an existing entry is a replacement of the same orientation
+            # rather than an independently supplied reverse arrow.
+            reverse = self.morphisms.get((target, source))
+            if reverse is not None:
+                validate_reciprocal_transports(
+                    candidate,
+                    reverse.transport_map,
+                    source=source,
+                    target=target,
+                )
+
         self.morphisms[(source, target)] = Morphism(
             source=source,
             target=target,
-            transport_map=matrix,
+            transport_map=candidate,
         )
-        logger.debug("Registered transport {} -> {}", source, target)
+        logger.debug("Registered candidate point action {} -> {}", source, target)
 
     def register_transport_from_points(
         self,
@@ -121,136 +170,153 @@ class TransportGroupoidAggregator:
         method: str = "pole",
         n_rungs: int = 2,
     ) -> npt.NDArray[np.float64]:
-        """Compute and register a transport map from two manifold points.
+        """Deprecated compatibility stub; tangent transport is not a point action.
 
-        Builds the parallel-transport matrix along the geodesic from
-        ``source_point`` to ``target_point`` via
-        :func:`groupoid.transport.compute_transport_matrix` (pole or
-        Schild's ladder) and registers it for the ``(source, target)``
-        edge. This wires the ladder approximations into the aggregation
-        pipeline for the case where per-client base points are known but
-        explicit transport matrices are not. The ladders are
-        approximations with a small residual; see LIMITATIONS.md for the
-        measured behavior.
+        Earlier releases assembled a square ambient array from transported
+        tangent basis vectors and silently registered it as an invertible
+        point-valued morphism.  On an embedded manifold such as S^2, the exact
+        projector extension of tangent parallel transport is rank-deficient in
+        the ambient representation and sends the base point's normal direction
+        to zero.  It therefore cannot satisfy the point-action and inverse
+        contract used by :meth:`aggregate`.
 
-        Returns
-        -------
-        np.ndarray
-            The registered transport matrix.
+        Use :meth:`register_transport` with an explicitly justified point action
+        (for example, the SO(3) rotations used by the S^2 benchmark).  Tangent-
+        vector utilities remain available in :mod:`groupoid.transport`.
         """
-        matrix = compute_transport_matrix(
-            self.manifold,
-            source_point,
-            target_point,
-            method=method,
-            n_rungs=n_rungs,
+        raise UnsupportedTransportRepresentationError(
+            "register_transport_from_points() is disabled because tangent-vector "
+            "parallel transport does not by itself define the invertible point "
+            "action required by this aggregator. Register an explicit, "
+            "representation-correct point action instead."
         )
-        self.register_transport(source, target, matrix)
-        return matrix
+
+    def _require_manifold_point(
+        self,
+        point: npt.NDArray[np.float64],
+        *,
+        context: str,
+    ) -> None:
+        """Fail closed unless ``point`` belongs to the configured manifold."""
+        belongs = getattr(self.manifold, "belongs", None)
+        if not callable(belongs):
+            raise InvalidPointTransportError(
+                "the point-valued aggregation contract requires a manifold.belongs() check"
+            )
+        if not bool(np.all(np.asarray(belongs(point)))):
+            raise InvalidPointTransportError(f"{context} is outside the configured manifold")
+
+    def _apply_point_action(
+        self,
+        matrix: npt.NDArray[np.float64],
+        point: npt.NDArray[np.float64],
+        *,
+        context: str,
+    ) -> npt.NDArray[np.float64]:
+        """Apply a registered linear point action and verify its exercised image."""
+        try:
+            with np.errstate(over="ignore", invalid="ignore"):
+                mapped = matrix @ point
+        except ValueError as exc:
+            raise InvalidPointTransportError(
+                f"{context} has incompatible matrix/point dimensions"
+            ) from exc
+        result = np.asarray(mapped, dtype=float)
+        if not np.all(np.isfinite(result)):
+            raise InvalidPointTransportError(f"{context} produced non-finite coordinates")
+        self._require_manifold_point(result, context=context)
+        return result
 
     def _get_transport_to_base(self, node: str) -> npt.NDArray[np.float64] | None:
-        """Compute the composite transport map from node to base_node.
-
-        Uses shortest path in the graph and composes morphisms along it.
-        Returns None if node == base_node (identity transport).
-        """
+        """Compute the composite registered point action from ``node`` to base."""
         if node == self.base_node:
             return None
 
         try:
             path = nx.shortest_path(self.graph.to_undirected(), node, self.base_node)
-        except nx.NetworkXNoPath as e:
+        except nx.NetworkXNoPath as exc:
             raise DisconnectedClientGraphError(
                 f"client graph is disconnected: no transport path from "
                 f"{node} to base {self.base_node}"
-            ) from e
+            ) from exc
         composite: Morphism | None = None
 
         for i in range(len(path) - 1):
             src, tgt = path[i], path[i + 1]
             if (src, tgt) in self.morphisms:
-                m = self.morphisms[(src, tgt)]
+                morphism = self.morphisms[(src, tgt)]
             elif (tgt, src) in self.morphisms:
-                m = inverse(self.morphisms[(tgt, src)])
+                morphism = inverse(self.morphisms[(tgt, src)])
             else:
                 raise ValueError(f"No transport map for edge ({src}, {tgt})")
 
-            composite = m if composite is None else compose(composite, m)
+            composite = morphism if composite is None else compose(composite, morphism)
 
         return composite.transport_map if composite is not None else None
 
     def check_consistency(self, client_params: dict[str, npt.NDArray[np.float64]]) -> float:
-        """Check cohomological consistency of current transport maps.
+        """Return the current cycle-basis holonomy defect.
 
-        Returns the H^1 norm. A value near zero indicates that the
-        local models can be consistently aggregated.
+        ``client_params`` is retained in the signature for API compatibility;
+        the defect depends only on the graph and registered matrices.  A value
+        near zero is not, by itself, a proof that the graph is connected, that
+        bridge transports are present, or that the matrices define valid point
+        actions.
         """
         transport_maps = {(m.source, m.target): m.transport_map for m in self.morphisms.values()}
-        h1 = compute_h1(self.graph, transport_maps)
-        logger.info("Cohomological consistency check: H^1 = {:.2e}", h1)
-        return h1
+        defect = cycle_basis_holonomy_defect(self.graph, transport_maps)
+        logger.info("Cycle-basis holonomy defect = {:.2e}", defect)
+        return defect
 
     def aggregate(
         self,
         client_params: dict[str, npt.NDArray[np.float64]],
         weights: dict[str, float] | None = None,
     ) -> FederatedRound:
-        """Run one round of groupoid-aware federated aggregation.
-
-        Parameters
-        ----------
-        client_params
-            Map from client node ID to local model parameters.
-        weights
-            Optional per-client weights for the Karcher mean.
-
-        Returns
-        -------
-        FederatedRound
-            The aggregation result including global params, consistency
-            metrics, and per-client local updates.
-        """
+        """Run one point-valued aggregation round under the explicit transport contract."""
         self._round_idx += 1
         logger.info("Starting aggregation round {}", self._round_idx)
 
-        h1 = self.check_consistency(client_params)
-        is_consistent = h1 < self.consistency_threshold
+        for node, params in client_params.items():
+            self._require_manifold_point(params, context=f"client {node} input")
 
-        if not is_consistent:
+        defect = self.check_consistency(client_params)
+        passes_threshold = defect < self.consistency_threshold
+
+        if not passes_threshold:
             logger.warning(
-                "H^1 = {:.2e} exceeds threshold {:.2e}, "
-                "aggregation may produce inconsistent results",
-                h1,
+                "Cycle-basis holonomy defect {:.2e} exceeds configured threshold {:.2e}; "
+                "this is a representation-dependent diagnostic, not a canonical verdict",
+                defect,
                 self.consistency_threshold,
             )
 
-        # Transport all client params to base node frame
-        transported = {}
-        transport_residuals = {}
+        transported: dict[str, npt.NDArray[np.float64]] = {}
+        orthogonality_residuals: dict[str, float] = {}
         for node, params in client_params.items():
             if node == self.base_node:
                 transported[node] = params
-                transport_residuals[node] = 0.0
+                orthogonality_residuals[node] = 0.0
             else:
-                # _get_transport_to_base returns None only for node == base_node
-                # (excluded by this else); a disconnected graph raises
-                # NetworkXNoPath. This guard is therefore defensively
-                # unreachable.
-                T = self._get_transport_to_base(node)
-                if T is None:  # pragma: no cover - unreachable defensive guard (see above)
+                # _get_transport_to_base returns None only for node ==
+                # base_node, which this else branch excludes; a disconnected
+                # graph raises DisconnectedClientGraphError instead. This guard
+                # is therefore defensively unreachable.
+                transform = self._get_transport_to_base(node)
+                if transform is None:  # pragma: no cover - unreachable defensive guard (see above)
                     raise ValueError(f"No transport path from {node} to {self.base_node}")
-                transported_params = T @ params
-                transported[node] = transported_params
-                transport_residuals[node] = float(
-                    np.linalg.norm(T @ T.T - np.eye(T.shape[0]), "fro")
+                transported[node] = self._apply_point_action(
+                    transform,
+                    params,
+                    context=f"forward point action {node}->{self.base_node}",
+                )
+                orthogonality_residuals[node] = float(
+                    np.linalg.norm(transform @ transform.T - np.eye(transform.shape[0]), "fro")
                 )
 
-        # Stack transported params and compute Karcher mean
         nodes = sorted(transported.keys())
-        param_stack = np.stack([transported[n] for n in nodes])
+        param_stack = np.stack([transported[node] for node in nodes])
 
-        # Optional topological divergence tracking on the transported
-        # parameters (all in the base frame, so rounds are comparable).
         divergence: _persistence.PersistenceSummary | None = None
         if self.track_divergence:
             divergence = _persistence.track_divergence(
@@ -259,41 +325,56 @@ class TransportGroupoidAggregator:
             self._prev_divergence = divergence
 
         if weights is not None:
-            w = np.array([weights.get(n, 1.0) for n in nodes])
-            w = w / w.sum()
+            normalized_weights = np.array([weights.get(node, 1.0) for node in nodes])
+            normalized_weights = normalized_weights / normalized_weights.sum()
         else:
-            w = None
+            normalized_weights = None
 
-        global_params = karcher_mean(self.manifold, param_stack, weights=w)
+        global_params = karcher_mean(self.manifold, param_stack, weights=normalized_weights)
+        self._require_manifold_point(global_params, context="Karcher mean output")
 
-        # Transport global params back to each client's local frame
-        local_updates = {}
+        local_updates: dict[str, npt.NDArray[np.float64]] = {}
         for node in client_params:
             if node == self.base_node:
                 local_updates[node] = global_params
             else:
-                # Same defensively-unreachable guard as in the forward
-                # transport loop above.
-                T = self._get_transport_to_base(node)
-                if T is None:  # pragma: no cover - unreachable defensive guard (see above)
+                # Same defensively-unreachable guard as the forward loop above:
+                # None is returned only for the base node, excluded here.
+                transform = self._get_transport_to_base(node)
+                if transform is None:  # pragma: no cover - unreachable defensive guard (see above)
                     raise ValueError(f"No transport path from {node} to {self.base_node}")
-                T_inv = np.linalg.inv(T)
-                local_updates[node] = T_inv @ global_params
+                try:
+                    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+                        inverse_transform = np.linalg.inv(transform)
+                except np.linalg.LinAlgError as exc:
+                    raise InvalidPointTransportError(
+                        f"composite transport for {node}->{self.base_node} became singular"
+                    ) from exc
+                if not np.all(np.isfinite(inverse_transform)):
+                    raise InvalidPointTransportError(
+                        f"return point action {self.base_node}->{node} has a non-finite "
+                        "numerical inverse"
+                    )
+                local_updates[node] = self._apply_point_action(
+                    inverse_transform,
+                    global_params,
+                    context=f"return point action {self.base_node}->{node}",
+                )
 
         result = FederatedRound(
             global_params=global_params,
             local_updates=local_updates,
-            h1_norm=h1,
-            is_consistent=is_consistent,
-            transport_residuals=transport_residuals,
+            h1_norm=defect,
+            is_consistent=passes_threshold,
+            transport_residuals=orthogonality_residuals,
             round_idx=self._round_idx,
             divergence=divergence,
         )
 
         logger.info(
-            "Round {} complete: H^1={:.2e}, consistent={}",
+            "Round {} complete: cycle-basis defect={:.2e}, passes_threshold={}",
             self._round_idx,
-            h1,
-            is_consistent,
+            defect,
+            passes_threshold,
         )
         return result

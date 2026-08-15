@@ -1,8 +1,8 @@
 {
   "upload_type": "software",
   "title": "GROUPOID: Groupoid-based aggregation for federated learning on Riemannian manifolds",
-  "version": "0.1.0.dev4",
-  "description": "<p>Pre-alpha research prototype exploring groupoid-based aggregation for federated learning on Riemannian manifolds. Implements transport groupoid morphisms, first cohomology (H^1) for consistency detection, the cellular sheaf Laplacian for spectral analysis, parallel transport (Schild's and pole ladders), Riemannian optimizers, and Karcher mean aggregation via geomstats.</p><p><strong>Erratum / supersession notice:</strong> this version (v0.1.0.dev4) carries the mathematical corrections introduced in v0.1.0.dev1 over the earlier v0.1.0.dev0 snapshot (version DOI 10.5281/zenodo.20563975): the sheaf (connection) Laplacian is a verified positive-semidefinite operator with a transport-consistent kernel; persistence diagrams retain the homology-dimension label so H0 and H1 are no longer conflated; and H^1 cohomology raises on incomplete cocycles instead of forming partial holonomy. It also carries the v0.1.0.dev2 correction of a first-step magnitude inflation in the RiemannianAdam optimizer's bias initialization, and the v0.1.0.dev3 Morphism str()/format() display fix and documentation-accuracy corrections (v0.1.0.dev3 was cut in source control but never separately tagged or deposited, so this is the first deposit carrying its changes). New in v0.1.0.dev4: the Riemannian SGD and Adam optimizers now parallel-transport their accumulated moments between iterates instead of projecting them (projection could annihilate a geodesic-aligned moment); the parallel-transport and persistent-homology modules are wired into the aggregation pipeline; and a preregistered synthetic benchmark (see the repository's experiments/ directory) tests the central transport-aggregation hypothesis, finding it supported on synthetic frame-misaligned data and still unvalidated on real federated learning tasks. The v0.1.0.dev0 version DOI must not be cited for results. Cite the concept DOI (10.5281/zenodo.20563974), which always resolves to the latest corrected version, or this version or later.</p>",
+  "version": "0.1.0.dev5",
+  "description": "<p>Pre-alpha research prototype exploring groupoid-based aggregation for federated learning on Riemannian manifolds. The supported point-valued aggregation path uses explicit invertible point actions, a cycle-basis holonomy defect diagnostic, the cellular sheaf Laplacian, and Karcher mean aggregation via geomstats. Tangent-vector parallel transport is provided separately through Schild and pole ladder utilities.</p><p><strong>Scientific correction in v0.1.0.dev5:</strong> earlier releases described the cycle-basis holonomy statistic as a first-cohomology (H^1) norm. The implementation actually computes the maximum Frobenius deviation of holonomy from identity over the particular NetworkX cycle basis. Exact zero has a flatness interpretation under explicit connectedness, completeness, invertibility, reciprocal opposite-edge registration when both directions are supplied, and complete evaluation of every cycle emitted by the NetworkX cycle-basis routine (an argument specific to the NetworkX Paton implementation exercised here, not to arbitrary cycle bases), but the nonzero magnitude is basis-dependent and is not invariant under arbitrary invertible changes of frame. The stored preregistered benchmark values are unchanged; the historical H2 rho and permutation p-value are reinterpreted as statistics for this fixed cycle-basis defect, not for a canonical H^1 norm. This version also withdraws register_transport_from_points from the supported point-valued aggregation path: its ambient square operator is assembled from transported tangent vectors and does not generally define the invertible manifold point action that aggregation requires. Tangent-vector ladder validation remains supported. The ambient tangent-matrix helper is restricted to vector-shaped point representations. Direct registered matrices are supported only under the explicit point-action contract documented in the repository, including reciprocal opposite arrows when both orientations are stored. See CORRECTION_NOTICE.md for the full correction record.</p><p>The earlier v0.1.0.dev0 version DOI 10.5281/zenodo.20563975 remains superseded and must not be cited for results. Exact historical versions should be cited by their version-specific DOI; project-level DOI metadata is maintained through the Zenodo version family.</p>",
   "creators": [
     {
       "name": "Maniches, Santiago",
@@ -16,7 +16,7 @@
     "Riemannian geometry",
     "groupoid",
     "sheaf theory",
-    "cohomology",
+    "holonomy",
     "topological data analysis"
   ],
   "related_identifiers": [
@@ -26,7 +26,7 @@
       "scheme": "doi"
     },
     {
-      "identifier": "10.5281/zenodo.20787126",
+      "identifier": "10.5281/zenodo.21230068",
       "relation": "isNewVersionOf",
       "scheme": "doi"
     },

@@ -3,105 +3,198 @@
 This page provides the mathematical background for GROUPOID. We assume
 familiarity with basic differential geometry and category theory.
 
-## Transport Groupoids
+## Transport Groupoids and Point Actions
 
 A **groupoid** is a category in which every morphism is invertible. In the
-federated learning context, the transport groupoid captures how model
-parameters are related across clients.
+current aggregation pipeline, client parameters are represented as points of a
+manifold embedded or coordinatized in a vector space. A registered transport
+matrix is therefore required to define an invertible action on those represented
+points, not merely an arbitrary square linear map.
 
-Given a network of $n$ clients, define a directed graph $G = (V, E)$ where
-each node $v_i \in V$ represents a client and each edge $(v_i, v_j) \in E$
-carries a **transport map** $T_{ij}$ that translates parameters from client
-$i$'s space to client $j$'s space.
+Given a network of clients, let a directed graph `G = (V, E)` carry a matrix
+`T_ij` on each registered edge. The aggregation path uses these matrices only
+where their forward and inverse actions preserve the manifold-valued points
+actually transported. The preregistered S^2 benchmark uses explicit SO(3)
+rotations, which satisfy this contract.
 
-The groupoid axioms require:
+The algebraic groupoid relations are:
 
-- **Identity**: $T_{ii} = \text{Id}$ for all $i$
-- **Inverse**: $T_{ji} = T_{ij}^{-1}$ for all $(i, j) \in E$
-- **Composition**: $T_{ik} = T_{jk} \circ T_{ij}$ whenever $(i, j)$ and $(j, k)$ are in $E$
+- **Identity**: `T_ii = Id`
+- **Inverse**: reverse traversal uses `T_ij^{-1}`. If both orientations of one
+  underlying edge are explicitly registered, they must be mutual numerical
+  inverses; registration and holonomy evaluation reject a conflicting pair.
+- **Composition**: path actions compose by matrix multiplication
+
+The `Morphism` container implements matrix composition and inversion. Its
+construction alone does not prove that a matrix is a geometrically valid point
+action for an arbitrary manifold representation.
 
 ## Karcher Mean on Riemannian Manifolds
 
-When model parameters live on a Riemannian manifold $(M, g)$, the standard
-Euclidean average is not well-defined. Instead, we use the **Karcher mean**
-(also called the Frechet mean), defined as the point minimizing the sum of
-squared geodesic distances:
+When model parameters live on a Riemannian manifold `(M, g)`, the standard
+Euclidean average need not remain on the manifold. GROUPOID uses the Karcher
+mean (Frechet mean), defined as a minimizer of the weighted sum of squared
+geodesic distances:
 
-$$
-\bar{x} = \arg\min_{y \in M} \sum_{i=1}^{n} w_i \, d_g(y, x_i)^2
-$$
+\[
+\bar{x} = \arg\min_{y \in M} \sum_{i=1}^{n} w_i d_g(y, x_i)^2.
+\]
 
-where $d_g$ is the geodesic distance and $w_i$ are non-negative weights
-summing to 1.
+The implementation delegates this computation to geomstats.
 
-The Karcher mean is computed iteratively:
+## Cycle-Basis Holonomy Defect
 
-1. Initialize $\bar{x}_0$ (e.g., to $x_1$)
-2. Compute $v = \sum_i w_i \, \text{Log}_{\bar{x}_k}(x_i)$
-3. Update $\bar{x}_{k+1} = \text{Exp}_{\bar{x}_k}(\epsilon \, v)$
-4. Repeat until $\|v\| < \text{tol}$
+Earlier releases described the transport diagnostic as a first-cohomology
+`H^1` norm. That terminology was too strong. The implementation computes a
+specific cycle-holonomy statistic.
 
-Here $\text{Log}$ and $\text{Exp}$ denote the Riemannian logarithmic and
-exponential maps.
+Let
 
-## First Cohomology and Global Consistency
+\[
+\mathcal B = \operatorname{cycle\_basis}(G_{\mathrm{undirected}})
+\]
 
-The **first cohomology** $H^1$ of a transport cocycle measures the obstruction
-to global consistency. Given transport maps $\{T_{ij}\}$ on a graph $G$:
+be the basis returned by NetworkX. For a cycle `gamma`, define the ordered
+holonomy
 
-- A **cocycle** is an assignment of transport maps to edges satisfying
-  $T_{ik} = T_{jk} \circ T_{ij}$ around every triangle.
-- A **coboundary** is a cocycle that can be written as $T_{ij} = g_j \circ g_i^{-1}$
-  for some gauge transformations $\{g_i\}$ at each node.
-- $H^1 = 0$ if and only if every cocycle is a coboundary.
+\[
+\operatorname{Hol}_T(\gamma)
+= T_{v_n v_1} T_{v_{n-1}v_n}\cdots T_{v_1v_2}.
+\]
 
-In practice, we compute $H^1$ by checking the **holonomy** around each cycle
-in a cycle basis of $G$:
+The implemented scalar is
 
-$$
-\text{Hol}(\gamma) = T_{v_n v_1} \circ T_{v_{n-1} v_n} \circ \cdots \circ T_{v_1 v_2}
-$$
+\[
+D_{\mathcal B}(T)
+= \max_{\gamma \in \mathcal B}
+\left\|\operatorname{Hol}_T(\gamma)-I\right\|_F.
+\]
 
-If $\text{Hol}(\gamma) = \text{Id}$ for all basis cycles $\gamma$, then
-$H^1 = 0$ and the local models are globally consistent.
+The primary API name is `cycle_basis_holonomy_defect`.
 
-The holonomy is the ordered product over **every** edge of the cycle, so the
-cocycle must be fully specified: each cycle edge needs a transport map in one
-direction or the other (the reverse direction is inverted). If an edge map is
-missing, the holonomy is undefined — a product over a strict subset of the
-cycle's edges is not a holonomy and must not be reported as a consistency
-result. `compute_h1` therefore raises `IncompleteCocycleError`, naming the
-missing edge, instead of silently forming a partial product.
+### What exact zero means
+
+For a connected graph whose every underlying undirected edge carries one
+invertible connection map, represented either by one orientation or by a
+reciprocal pair, the cycles emitted by `networkx.cycle_basis` are sufficient to
+test flatness.
+
+The justification is specific to the NetworkX Paton implementation that
+GROUPOID exercises, and it rests on that implementation's emission order rather
+than on any one fixed spanning tree. The returned list is **not** in general the
+fundamental-cycle basis of a single spanning tree: a returned cycle may close on
+a chord already used by an earlier returned cycle. What does hold for the
+emitted sequence is that each cycle is produced when the traversal first closes
+a chord not already carried by an earlier emitted cycle. Fix a root and
+propagate a frame along the traversal. Identity holonomy on the emitted cycles
+then pins the chord transports one at a time, in emission order, against the
+frame already determined -- a triangular system. Every chord therefore agrees
+with the frame-induced transport, and consequently every closed loop has
+identity holonomy.
+
+This argument is stated for the NetworkX implementation exercised here. It is
+not claimed for arbitrary graph-theoretic cycle bases, nor for future NetworkX
+implementations whose emission order may differ.
+
+Under those assumptions,
+
+\[
+D_{\mathcal B}(T)=0
+\quad\Longleftrightarrow\quad
+\text{the represented graph connection is flat}.
+\]
+
+This is a statement about exact flatness. A zero cycle defect does not certify
+that the graph is connected, that bridge-edge transports were supplied, or that
+the matrices define valid actions on manifold points.
+
+### What the magnitude does not mean
+
+The nonzero value is not a canonical cohomology norm.
+
+- Different valid cycle bases can produce different maxima for the same graph
+  and transport assignment.
+- Under a vertexwise frame change `T'_uv = G_v T_uv G_u^{-1}`, loop holonomy
+  changes by similarity. Exact identity is preserved, but the Frobenius distance
+  to identity is not preserved under a general invertible similarity transform.
+- In an orthogonal representation, orthogonal conjugation and reversal preserve
+  the Frobenius magnitude. This is the domain used by the synthetic SO(3)
+  benchmark.
+
+Accordingly, the finite `consistency_threshold` in the aggregator is a
+representation-dependent operational threshold. The legacy `is_consistent`
+field means only that the measured defect is below that configured threshold.
+
+### Incomplete cycle transport
+
+A cycle holonomy requires every edge of that cycle. If a selected basis cycle
+contains an edge without a transport map in either direction,
+`cycle_basis_holonomy_defect` raises `IncompleteCocycleError`. If both
+orientations are supplied for one underlying edge but are not mutual numerical
+inverses, it raises `NonReciprocalTransportError` before reducing the graph to
+its undirected cycle basis. Bridges are not part of any cycle and are therefore
+outside this diagnostic; the aggregation path checks path availability
+separately.
+
+## Tangent Parallel Transport Is Not a Point Action
+
+Levi-Civita parallel transport maps tangent vectors:
+
+\[
+L_{p\to q}:T_pM\rightarrow T_qM.
+\]
+
+The ladder utilities in `groupoid.transport` approximate this tangent-vector
+map. `compute_tangent_transport_matrix` forms an ambient coordinate array by
+projecting each ambient coordinate vector into `T_pM`, transporting the tangent
+vector, and storing the transported vector as a column. This helper is defined
+only for vector-shaped point representations, where both points are 1D
+coordinate arrays of the same shape. Matrix-valued or otherwise structured
+points must use the ladder functions directly on native-shaped tangent objects.
+
+For an embedded manifold, the exact ambient projector extension has the form
+
+\[
+A_{p\to q}=L_{p\to q}P_p.
+\]
+
+When the tangent dimension is smaller than the ambient dimension, this operator
+is rank-deficient. On `S^2` in `R^3`, `P_p p = 0`, so the exact operator cannot
+be an invertible 3 by 3 point action. Numerical ladder error can perturb that
+rank, but approximation error does not supply the missing geometric contract.
+
+For this reason `register_transport_from_points` is withdrawn from the supported
+point-valued aggregation path and now fails closed. Tangent-vector transport
+remains available independently. A generic construction of a point action from
+tangent parallel transport on an arbitrary Riemannian manifold is not claimed.
 
 ## Sheaf Theory and Restriction Maps
 
-A **cellular sheaf** $\mathcal{F}$ on $G$ assigns:
+A **cellular sheaf** `F` on `G` assigns a vector space to each node and linear
+restriction maps to incidences. A global section is an assignment whose
+restrictions agree on shared edges.
 
-- A vector space $\mathcal{F}(v)$ to each node $v$ (the stalk)
-- A linear map $\mathcal{F}_{v \to e} : \mathcal{F}(v) \to \mathcal{F}(e)$
-  to each incidence (the restriction map)
+The implemented sheaf Laplacian is
 
-A **global section** is an assignment $s(v) \in \mathcal{F}(v)$ for each node
-such that the restriction maps agree on shared edges:
+\[
+L_F = \delta^T\delta,
+\]
 
-$$
-\mathcal{F}_{u \to e}(s(u)) = \mathcal{F}_{v \to e}(s(v))
-$$
+so it is positive semidefinite and its kernel is the space of sections satisfying
+the represented restriction constraints.
 
-for every edge $e = (u, v)$.
+## Connection to the Current Prototype
 
-The **sheaf Laplacian** $L_{\mathcal{F}}$ generalizes the graph Laplacian and
-its kernel equals the space of global sections. A nonzero kernel indicates
-that the local data can be consistently glued into a global model.
-
-## Connection to Federated Learning
-
-| Mathematical Concept | Federated Learning Analogue |
+| Mathematical object | Current implementation meaning |
 |---|---|
-| Node $v_i$ | Client $i$ |
-| Stalk $\mathcal{F}(v_i)$ | Client $i$'s parameter space |
-| Transport map $T_{ij}$ | Parallel transport between parameter spaces |
-| Karcher mean | Geometric model aggregation |
-| $H^1 = 0$ | Local models are globally consistent |
-| $H^1 \neq 0$ | Obstruction to consistent aggregation |
-| Global section | A successfully aggregated global model |
+| Node | Client |
+| Explicit point action `T_ij` | Caller-supplied invertible map used to move represented manifold points |
+| Karcher mean | Geometric aggregation of transported points |
+| `D_B(T) = 0` under stated assumptions | Flat represented transport connection |
+| `D_B(T) > 0` | Nontrivial holonomy detected on at least one selected basis cycle |
+| Finite defect threshold | Representation-dependent operational diagnostic |
+| Tangent parallel transport | Separate tangent-vector utility, not automatically a point action |
+| Global sheaf section | Assignment satisfying the sheaf restriction constraints |
+
+See `CORRECTION_NOTICE.md` for the correction history and the exact distinction
+between the historical `H^1` terminology and the implemented statistic.

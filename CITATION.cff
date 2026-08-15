@@ -1,19 +1,18 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
+message: "If you use this software, please cite the Concept DOI below so the citation resolves to the latest version."
 type: software
 title: "GROUPOID: Groupoid-based aggregation for federated learning on Riemannian manifolds"
-version: 0.1.0.dev4
-date-released: 2026-07-06
+version: 0.1.0.dev5
 license: Apache-2.0
 repository-code: "https://github.com/smaniches/GROUPOID"
 doi: 10.5281/zenodo.20563974
 identifiers:
   - type: doi
     value: 10.5281/zenodo.20563974
-    description: "Concept DOI (all versions) — always resolves to the latest, mathematically corrected version. Cite this."
+    description: "Concept DOI (all versions)."
   - type: doi
     value: 10.5281/zenodo.20563975
-    description: "Version DOI (v0.1.0.dev0) — SUPERSEDED. This snapshot predates the sheaf-Laplacian PSD, persistence-dimension, and cohomology corrections; do not cite for results. Use v0.1.0.dev1 or later."
+    description: "Version DOI (v0.1.0.dev0) - SUPERSEDED. Do not cite this historical snapshot for current results."
 authors:
   - family-names: Maniches
     given-names: Santiago
@@ -25,11 +24,12 @@ keywords:
   - Riemannian geometry
   - groupoid
   - sheaf theory
-  - cohomology
+  - holonomy
   - topological data analysis
 abstract: >-
-  Research prototype exploring groupoid-based aggregation for federated
-  learning on Riemannian manifolds. Implements transport groupoid
-  morphisms, first cohomology (H^1) for consistency detection,
-  cellular sheaf Laplacian for spectral analysis, and Karcher mean
-  aggregation via geomstats.
+  Pre-alpha research prototype for groupoid-based aggregation on Riemannian
+  manifolds. The supported point-valued path uses explicit invertible point
+  actions, a basis-dependent cycle-holonomy defect diagnostic, the cellular
+  sheaf Laplacian, and Karcher mean aggregation. Tangent-vector parallel
+  transport utilities are provided separately. Earlier H^1-norm terminology
+  is superseded by the construct definition in CORRECTION_NOTICE.md.
