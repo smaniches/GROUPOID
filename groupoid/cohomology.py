@@ -51,11 +51,20 @@ def cycle_basis_holonomy_defect(
     Exact zero has a stronger meaning than the magnitude. On a connected
     graph, when every underlying undirected edge carries one invertible
     connection map (represented by one orientation or by a reciprocal pair)
-    and the NetworkX/Paton spanning-tree fundamental cycles are evaluated
+    and every cycle emitted by :func:`networkx.cycle_basis` is evaluated
     completely, ``D_B(T) == 0`` is equivalent to flat transport: every
-    closed-loop holonomy is identity. That statement does not certify graph
-    connectedness, bridge completeness, point-action validity, or any finite
-    numerical threshold.
+    closed-loop holonomy is identity.
+
+    That justification is specific to the NetworkX Paton implementation this
+    module exercises. The emitted list is not in general the fundamental-cycle
+    basis of one fixed spanning tree; the argument instead uses the emission
+    order, in which every emitted cycle contributes exactly one chord not
+    present in any earlier emitted cycle, so the induced constraint system is
+    triangular. It is not claimed for arbitrary graph-theoretic cycle bases or
+    for future NetworkX implementations whose emission order may differ.
+
+    The equivalence does not certify graph connectedness, bridge completeness,
+    point-action validity, or any finite numerical threshold.
 
     Parameters
     ----------
@@ -88,6 +97,11 @@ def cycle_basis_holonomy_defect(
     """
     undirected = graph.to_undirected()
     for u, v in undirected.edges():
+        if u == v:
+            # A self-loop is one directed transport, not two opposite arrows.
+            # ``(u, v)`` and ``(v, u)`` are the same key here, so applying the
+            # reciprocal-pair test would spuriously demand an involution.
+            continue
         if (u, v) in transport_maps and (v, u) in transport_maps:
             validate_reciprocal_transports(
                 transport_maps[(u, v)],

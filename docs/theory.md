@@ -76,12 +76,25 @@ The primary API name is `cycle_basis_holonomy_defect`.
 
 For a connected graph whose every underlying undirected edge carries one
 invertible connection map, represented either by one orientation or by a
-reciprocal pair, the spanning-tree fundamental cycles constructed by the
-NetworkX/Paton procedure are sufficient to test flatness. Choose a root and
-define a frame at each vertex by composing transports along the unique tree
-path. Identity holonomy on every fundamental cycle forces each non-tree edge to
-agree with the tree-induced transport. Consequently every closed loop has
+reciprocal pair, the cycles emitted by `networkx.cycle_basis` are sufficient to
+test flatness.
+
+The justification is specific to the NetworkX Paton implementation that
+GROUPOID exercises, and it rests on that implementation's emission order rather
+than on any one fixed spanning tree. The returned list is **not** in general the
+fundamental-cycle basis of a single spanning tree: a returned cycle may close on
+a chord already used by an earlier returned cycle. What does hold for the
+emitted sequence is that each cycle is produced when the traversal first closes
+a chord not already carried by an earlier emitted cycle. Fix a root and
+propagate a frame along the traversal. Identity holonomy on the emitted cycles
+then pins the chord transports one at a time, in emission order, against the
+frame already determined -- a triangular system. Every chord therefore agrees
+with the frame-induced transport, and consequently every closed loop has
 identity holonomy.
+
+This argument is stated for the NetworkX implementation exercised here. It is
+not claimed for arbitrary graph-theoretic cycle bases, nor for future NetworkX
+implementations whose emission order may differ.
 
 Under those assumptions,
 

@@ -29,8 +29,11 @@ system. The following limitations apply.
   `networkx.cycle_basis` on the undirected graph. Its exact zero set can detect
   flat transport under connectedness, complete invertible underlying-edge
   transports, reciprocal opposite registrations when both directions are
-  supplied, and the spanning-tree fundamental-cycle construction used by
-  NetworkX. Its
+  supplied, and complete evaluation of every cycle emitted by
+  `networkx.cycle_basis`. That flatness argument is specific to the NetworkX
+  Paton implementation exercised here and to its emission order; the emitted
+  list is not in general the fundamental-cycle basis of one fixed spanning
+  tree, and the argument is not claimed for arbitrary cycle bases. Its
   nonzero magnitude is basis-dependent and is not invariant under arbitrary
   invertible changes of frame. A finite `consistency_threshold` is therefore a
   representation-dependent diagnostic, not a canonical cohomological verdict.

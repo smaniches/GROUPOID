@@ -26,9 +26,15 @@ The correction distinguishes three properties that were previously conflated:
 
 1. Under a connected graph with one complete invertible connection map per
    underlying undirected edge, represented by one orientation or a reciprocal
-   pair, identity holonomy on the NetworkX/Paton spanning-tree fundamental
-   cycles is sufficient for flat transport. Thus exact zero of the implemented
-   defect has a valid flatness interpretation under explicit assumptions.
+   pair, identity holonomy on every cycle emitted by `networkx.cycle_basis` is
+   sufficient for flat transport. Thus exact zero of the implemented defect has
+   a valid flatness interpretation under explicit assumptions. That supporting
+   argument is specific to the NetworkX Paton implementation exercised by
+   GROUPOID: the emitted list is not in general the fundamental-cycle basis of
+   one fixed spanning tree, but in emission order each cycle contributes exactly
+   one chord absent from every earlier emitted cycle, so the induced constraint
+   system is triangular. The argument is not claimed for arbitrary cycle bases
+   or for future NetworkX implementations whose emission order may differ.
 2. The nonzero magnitude is not independent of the selected cycle basis.
 3. The Frobenius magnitude is invariant under orthogonal conjugation and
    reversal in the orthogonal domain, but is not invariant under general

@@ -141,14 +141,18 @@ class TransportGroupoidAggregator:
                 "and cannot define the return point action required by aggregation"
             )
 
-        reverse = self.morphisms.get((target, source))
-        if reverse is not None:
-            validate_reciprocal_transports(
-                candidate,
-                reverse.transport_map,
-                source=source,
-                target=target,
-            )
+        if source != target:
+            # For a self-loop the ``(target, source)`` key is this same arrow,
+            # so an existing entry is a replacement of the same orientation
+            # rather than an independently supplied reverse arrow.
+            reverse = self.morphisms.get((target, source))
+            if reverse is not None:
+                validate_reciprocal_transports(
+                    candidate,
+                    reverse.transport_map,
+                    source=source,
+                    target=target,
+                )
 
         self.morphisms[(source, target)] = Morphism(
             source=source,
@@ -294,8 +298,12 @@ class TransportGroupoidAggregator:
                 transported[node] = params
                 orthogonality_residuals[node] = 0.0
             else:
+                # _get_transport_to_base returns None only for node ==
+                # base_node, which this else branch excludes; a disconnected
+                # graph raises DisconnectedClientGraphError instead. This guard
+                # is therefore defensively unreachable.
                 transform = self._get_transport_to_base(node)
-                if transform is None:  # pragma: no cover
+                if transform is None:  # pragma: no cover - unreachable defensive guard (see above)
                     raise ValueError(f"No transport path from {node} to {self.base_node}")
                 transported[node] = self._apply_point_action(
                     transform,
@@ -330,13 +338,15 @@ class TransportGroupoidAggregator:
             if node == self.base_node:
                 local_updates[node] = global_params
             else:
+                # Same defensively-unreachable guard as the forward loop above:
+                # None is returned only for the base node, excluded here.
                 transform = self._get_transport_to_base(node)
-                if transform is None:  # pragma: no cover
+                if transform is None:  # pragma: no cover - unreachable defensive guard (see above)
                     raise ValueError(f"No transport path from {node} to {self.base_node}")
                 try:
                     with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
                         inverse_transform = np.linalg.inv(transform)
-                except np.linalg.LinAlgError as exc:  # pragma: no cover
+                except np.linalg.LinAlgError as exc:
                     raise InvalidPointTransportError(
                         f"composite transport for {node}->{self.base_node} became singular"
                     ) from exc

@@ -68,8 +68,11 @@ test that fails on the pre-fix code.
    the undirected graph. Exact zero has a valid flatness interpretation under
    explicit connectedness, complete invertible underlying-edge transport,
    reciprocal opposite registrations when both directions are supplied, and
-   fundamental-cycle assumptions, but the nonzero magnitude depends on the
-   chosen cycle basis and
+   complete evaluation of every cycle emitted by `networkx.cycle_basis`
+   (justified for the emission order of the NetworkX Paton implementation
+   exercised here, not for arbitrary cycle bases; the emitted list is not in
+   general one spanning tree's fundamental-cycle basis), but the nonzero
+   magnitude depends on the chosen cycle basis and
    is not invariant under arbitrary invertible changes of frame. The historical
    benchmark numbers are retained; H2 is reinterpreted as a correlation with this
    fixed cycle-basis defect rather than with a canonical cohomology norm.

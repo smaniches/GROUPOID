@@ -134,6 +134,62 @@ def test_reciprocity_validator_rejects_mismatched_opposite_shapes():
         cycle_basis_holonomy_defect(graph, transports)
 
 
+def test_noninvolutive_self_loop_is_scored_not_rejected():
+    """A self-loop is one arrow, not two opposite orientations.
+
+    ``(u, v)`` and ``(v, u)`` are the same key when ``u == v``, so the
+    reciprocal-pair test must be skipped; otherwise a single self-loop would be
+    forced to satisfy ``T @ T == I``.
+    """
+    theta = np.pi / 6
+    graph = nx.DiGraph()
+    graph.add_edge("A", "A")
+
+    defect = cycle_basis_holonomy_defect(graph, {("A", "A"): rotation_z(theta)})
+
+    assert defect == pytest.approx(2.0 * np.sqrt(1.0 - np.cos(theta)))
+
+
+def test_identity_self_loop_has_zero_cycle_basis_defect():
+    graph = nx.DiGraph()
+    graph.add_edge("A", "A")
+    assert cycle_basis_holonomy_defect(graph, {("A", "A"): np.eye(2)}) == 0.0
+
+
+def test_self_loop_does_not_mask_nonreciprocal_pair_elsewhere():
+    """Skipping self-loops must not weaken reciprocity on ordinary edges."""
+    graph = nx.DiGraph([("A", "B"), ("B", "A"), ("B", "C"), ("A", "C")])
+    graph.add_edge("A", "A")
+    transports = {
+        ("A", "A"): rotation_z(0.3),
+        ("A", "B"): np.eye(2),
+        ("B", "A"): 2.0 * np.eye(2),
+        ("B", "C"): np.eye(2),
+        ("A", "C"): np.eye(2),
+    }
+    with pytest.raises(NonReciprocalTransportError, match="not mutual numerical inverses"):
+        cycle_basis_holonomy_defect(graph, transports)
+
+
+def test_self_loop_registration_and_replacement_is_not_reverse_orientation():
+    agg = make_sphere_aggregator()
+    agg.register_transport("A", "A", np.eye(3))
+
+    theta = np.pi / 4
+    replacement = np.array(
+        [
+            [np.cos(theta), -np.sin(theta), 0.0],
+            [np.sin(theta), np.cos(theta), 0.0],
+            [0.0, 0.0, 1.0],
+        ]
+    )
+    # Same-key re-registration is a replacement of one orientation, not the
+    # supply of an independent reverse arrow, so reciprocity must not apply.
+    agg.register_transport("A", "A", replacement)
+
+    np.testing.assert_allclose(agg.morphisms[("A", "A")].transport_map, replacement)
+
+
 def test_aggregator_rejects_nonreciprocal_reverse_registration():
     agg = make_sphere_aggregator()
     agg.register_transport("A", "B", np.eye(3))
@@ -279,6 +335,28 @@ def test_composite_return_inverse_must_remain_finite(monkeypatch):
 
     north = np.array([0.0, 0.0, 1.0])
     with pytest.raises(InvalidPointTransportError, match="non-finite numerical inverse"):
+        agg.aggregate({"A": north, "B": north})
+
+
+def test_singular_composite_return_inverse_raises(monkeypatch):
+    """The composite-inverse LinAlgError handler is reachable, not dead code.
+
+    Each edge is checked for invertibility at registration, but a composite of
+    individually invertible maps can still be exactly singular, so this branch
+    must be exercised rather than excluded from the coverage gate.
+    """
+    monkeypatch.setattr(aggregation_module, "karcher_mean", fake_sphere_mean)
+    agg = make_sphere_aggregator()
+    singular = np.diag([0.0, 1.0, 1.0])
+
+    monkeypatch.setattr(
+        agg,
+        "_get_transport_to_base",
+        lambda node: singular if node == "B" else None,
+    )
+
+    north = np.array([0.0, 0.0, 1.0])
+    with pytest.raises(InvalidPointTransportError, match="became singular"):
         agg.aggregate({"A": north, "B": north})
 
 

@@ -19,10 +19,13 @@ scope. Historical preregistration and result artifacts are preserved unchanged.
   `max_{gamma in B} ||Hol(gamma) - I||_F` over the NetworkX cycle basis. The
   historical `compute_h1` name remains as a deprecated compatibility alias.
   The exact zero set has a flatness interpretation under explicit connected,
-  complete, invertible fundamental-cycle assumptions, but the nonzero
-  magnitude is cycle-basis-dependent and is not invariant under arbitrary
-  invertible changes of frame. Finite threshold decisions are therefore
-  representation-dependent diagnostics, not canonical cohomological verdicts.
+  complete, invertible edge-transport assumptions with every cycle emitted by
+  `networkx.cycle_basis` evaluated -- an argument specific to the emission
+  order of the NetworkX Paton implementation exercised here, not to arbitrary
+  cycle bases -- but the nonzero magnitude is cycle-basis-dependent and is not
+  invariant under arbitrary invertible changes of frame. Finite threshold
+  decisions are therefore representation-dependent diagnostics, not canonical
+  cohomological verdicts.
 - **Tangent-vector transport is no longer promoted into an unsupported
   point-valued morphism.** `compute_tangent_transport_matrix` now names the
   ambient-coordinate tangent operator explicitly. The old
