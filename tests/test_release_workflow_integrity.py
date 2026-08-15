@@ -30,10 +30,10 @@ def _run_text(job: dict[str, Any]) -> str:
 
 
 def _attest_sbom_steps(job: dict[str, Any]) -> list[dict[str, Any]]:
+    # The trailing "@" is load-bearing: it must not match the build job's
+    # actions/attest-build-provenance@ step.
     return [
-        step
-        for step in job["steps"]
-        if str(step.get("uses", "")).startswith("actions/attest-sbom@")
+        step for step in job["steps"] if str(step.get("uses", "")).startswith("actions/attest@")
     ]
 
 
@@ -77,7 +77,12 @@ def test_sbom_attestation_subject_is_wheel_only_never_sdist() -> None:
     assert len(attest_job_steps) == 1
     step_inputs = attest_job_steps[0]["with"]
     assert step_inputs["subject-path"] == "dist/*.whl"
-    assert step_inputs["sbom-path"] == "sbom.cdx.json"
+    # Custom predicate mode. sbom-path must stay absent: it takes precedence in
+    # the action's mode detection, and that detector rejects the reproducible
+    # CycloneDX document for omitting the spec-optional serialNumber.
+    assert step_inputs["predicate-type"] == "https://cyclonedx.org/bom"
+    assert step_inputs["predicate-path"] == "sbom.cdx.json"
+    assert "sbom-path" not in step_inputs
 
 
 def test_attest_sbom_job_installs_nothing_and_runs_no_code() -> None:
@@ -86,7 +91,7 @@ def test_attest_sbom_job_installs_nothing_and_runs_no_code() -> None:
     for step in job["steps"]:
         assert "run" not in step
         assert str(step.get("uses", "")).startswith(
-            ("actions/download-artifact@", "actions/attest-sbom@")
+            ("actions/download-artifact@", "actions/attest@")
         )
 
 
