@@ -138,7 +138,7 @@ jobs:
     permissions:
       contents: read
       id-token: write       # attestation OIDC
-      attestations: write   # actions/attest-sbom
+      attestations: write   # actions/attest
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
@@ -148,10 +148,17 @@ jobs:
         with:
           name: release-sbom
           path: .
-      - uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e  # v4.1.0
+      - uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26  # v4.1.0
+        env:
+          NODE_OPTIONS: '--max-http-header-size=32768'
         with:
           subject-path: "dist/*.whl"
-          sbom-path: "sbom.cdx.json"
+          # Custom predicate mode preserves the native CycloneDX predicate
+          # semantics while bypassing the action's stricter than specification
+          # SBOM detector, which requires serialNumber even though the valid
+          # reproducible CycloneDX document intentionally omits it.
+          predicate-type: "https://cyclonedx.org/bom"
+          predicate-path: "sbom.cdx.json"
 
   publish-pypi:
     # Publication waits for the full integrity chain: build provenance
