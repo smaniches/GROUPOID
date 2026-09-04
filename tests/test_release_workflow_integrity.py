@@ -513,6 +513,23 @@ def test_the_tag_must_name_the_version_the_commit_publishes(tmp_path: Path) -> N
         ), f"guard admitted alias {alias!r}"
 
 
+def test_only_a_canonical_version_spelling_is_admitted(tmp_path: Path) -> None:
+    """PEP 440 equivalents collapse to one PyPI version but two tags.
+
+    setuptools normalizes the version into the artifact filenames, so
+    1.0.0-rc1 and 1.0.0rc1 publish the same version while yielding different
+    tags and different concurrency groups. Only the canonical spelling is
+    admitted, so each release has exactly one identity.
+    """
+    assert _version_guard_admits("v1.0.0rc1", "1.0.0rc1", tmp_path / "canonical")
+    assert _version_guard_admits("v0.1.0.dev5", "0.1.0.dev5", tmp_path / "dev")
+    for spelling in ("1.0.0-rc1", "1.0.0.rc1", "1.0.0RC1", "1.0.0rc1+local", "1.0.0dev5"):
+        safe = spelling.replace("+", "_").replace(".", "_")
+        assert not _version_guard_admits(
+            f"v{spelling}", spelling, tmp_path / safe
+        ), f"guard admitted non-canonical {spelling!r}"
+
+
 def test_the_correspondence_guard_runs_after_checkout_and_before_the_build(
     tmp_path: Path,
 ) -> None:

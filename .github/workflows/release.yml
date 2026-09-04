@@ -126,6 +126,17 @@ jobs:
             echo "::error::could not extract a version from pyproject.toml"
             exit 1
           fi
+          # Compare canonical spellings only. setuptools normalizes the version
+          # into the artifact filenames, so PEP 440 equivalents like 1.0.0-rc1
+          # and 1.0.0rc1 become one PyPI version while yielding two different
+          # tags and two different concurrency groups. Admitting exactly one
+          # spelling per release collapses that back to a single identity.
+          # Same expression auto-tag-release.yml already applies before it will
+          # cut a tag, so this only closes the hand-tagged path.
+          if ! echo "${version}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]+|a[0-9]+|b[0-9]+|rc[0-9]+)?$'; then
+            echo "::error::pyproject version '${version}' is not in canonical PEP 440 form (expected X.Y.Z, optionally with .devN/aN/bN/rcN, no local metadata). setuptools would normalize it into the artifact names, so a non-canonical spelling can publish the same PyPI version under a different tag and a different concurrency group."
+            exit 1
+          fi
           if [ "${RELEASE_TARGET}" != "v${version}" ]; then
             echo "::error::release target '${RELEASE_TARGET}' does not name the version this commit publishes ('${version}', so the tag must be exactly 'v${version}'). Two differently named targets building one version would land in different concurrency groups and could publish it concurrently."
             exit 1
