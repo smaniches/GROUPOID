@@ -523,11 +523,64 @@ def test_only_a_canonical_version_spelling_is_admitted(tmp_path: Path) -> None:
     """
     assert _version_guard_admits("v1.0.0rc1", "1.0.0rc1", tmp_path / "canonical")
     assert _version_guard_admits("v0.1.0.dev5", "0.1.0.dev5", tmp_path / "dev")
-    for spelling in ("1.0.0-rc1", "1.0.0.rc1", "1.0.0RC1", "1.0.0rc1+local", "1.0.0dev5"):
+    for spelling in (
+        "1.0.0-rc1",
+        "1.0.0.rc1",
+        "1.0.0RC1",
+        "1.0.0rc1+local",
+        "1.0.0dev5",
+        "01.0.0",
+        "1.0.0rc01",
+        "0.1.0.dev05",
+    ):
         safe = spelling.replace("+", "_").replace(".", "_")
         assert not _version_guard_admits(
             f"v{spelling}", spelling, tmp_path / safe
         ), f"guard admitted non-canonical {spelling!r}"
+
+
+def test_the_guard_admits_exactly_the_self_normalizing_versions(tmp_path: Path) -> None:
+    """The property that closes the equivalence-collapse class for good.
+
+    Two spellings that PEP 440 normalizes to one version would publish one
+    PyPI version from two concurrency groups. The guard must therefore admit a
+    version if and only if it is already its own normalization, which this
+    checks against packaging rather than against a hand-written list.
+    """
+    from packaging.version import Version
+
+    candidates = [
+        "1.0.0",
+        "0.1.0.dev5",
+        "1.0.0rc1",
+        "2.11.3b7",
+        "1.0.0a0",
+        "0.0.0",
+        "10.20.30",
+        "01.0.0",
+        "1.01.0",
+        "1.0.00",
+        "1.0.0rc01",
+        "0.1.0.dev05",
+        "1.0.0-rc1",
+        "1.0.0.rc1",
+        "1.0.0RC1",
+        "1.0.0rc1+local",
+        "1.0.0dev5",
+        "1.0",
+        "1.0.0.post1",
+    ]
+    for index, spelling in enumerate(candidates):
+        admitted = _version_guard_admits(f"v{spelling}", spelling, tmp_path / str(index))
+        try:
+            canonical = str(Version(spelling)) == spelling
+        except Exception:  # noqa: BLE001 - not a PEP 440 version at all
+            canonical = False
+        # "1.0" and "1.0.0.post1" are self-normalizing but outside the release
+        # grammar this project uses; the guard may only be stricter, never
+        # looser, than self-normalization.
+        if admitted:
+            assert canonical, f"admitted {spelling!r}, which normalizes to {Version(spelling)}"
 
 
 def test_the_correspondence_guard_runs_after_checkout_and_before_the_build(

@@ -60,7 +60,7 @@ jobs:
           # anything else. A version that doesn't match this is presumably
           # intentional and unusual enough to want a human tagging it by
           # hand rather than this automation guessing.
-          if ! echo "${version}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]+|a[0-9]+|b[0-9]+|rc[0-9]+)?$'; then
+          if ! echo "${version}" | grep -Eq '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\.dev(0|[1-9][0-9]*)|a(0|[1-9][0-9]*)|b(0|[1-9][0-9]*)|rc(0|[1-9][0-9]*))?$'; then
             echo "::error::version '${version}' is not a recognized release format (expected X.Y.Z, optionally with .devN/aN/bN/rcN, no local metadata); refusing to tag automatically. Tag it manually if this is intentional."
             exit 1
           fi

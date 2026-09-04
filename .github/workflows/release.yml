@@ -126,14 +126,17 @@ jobs:
             echo "::error::could not extract a version from pyproject.toml"
             exit 1
           fi
-          # Compare canonical spellings only. setuptools normalizes the version
-          # into the artifact filenames, so PEP 440 equivalents like 1.0.0-rc1
-          # and 1.0.0rc1 become one PyPI version while yielding two different
-          # tags and two different concurrency groups. Admitting exactly one
-          # spelling per release collapses that back to a single identity.
-          # Same expression auto-tag-release.yml already applies before it will
-          # cut a tag, so this only closes the hand-tagged path.
-          if ! echo "${version}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(\.dev[0-9]+|a[0-9]+|b[0-9]+|rc[0-9]+)?$'; then
+          # Admit only strings that are already their own PEP 440 normalization.
+          # setuptools normalizes the version into the artifact filenames, so
+          # any two equivalent spellings -- 1.0.0-rc1 and 1.0.0rc1, or 01.0.0
+          # and 1.0.0, or 1.0.0rc01 and 1.0.0rc1 -- become one PyPI version
+          # while yielding two tags and two concurrency groups. The grammar
+          # below is canonical form for the versions this project uses: every
+          # numeric component rejects leading zeros, so distinct admitted
+          # strings are distinct normalized versions and the identity is
+          # single-valued. auto-tag-release.yml applies the same expression
+          # before it will cut a tag, so the two stay in step.
+          if ! echo "${version}" | grep -Eq '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\.dev(0|[1-9][0-9]*)|a(0|[1-9][0-9]*)|b(0|[1-9][0-9]*)|rc(0|[1-9][0-9]*))?$'; then
             echo "::error::pyproject version '${version}' is not in canonical PEP 440 form (expected X.Y.Z, optionally with .devN/aN/bN/rcN, no local metadata). setuptools would normalize it into the artifact names, so a non-canonical spelling can publish the same PyPI version under a different tag and a different concurrency group."
             exit 1
           fi
