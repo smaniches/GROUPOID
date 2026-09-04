@@ -26,6 +26,11 @@ jobs:
   # job; the SBOM attestation runs in `attest-sbom`, which installs nothing.
   build:
     runs-on: ubuntu-latest
+    # COMPLETE means verification and adoption only. Downstream jobs read this
+    # to keep an adoption run from republishing or re-releasing a version that
+    # is already correct on PyPI.
+    outputs:
+      adopted: ${{ steps.pypi.outputs.adopted }}
     permissions:
       contents: read
       id-token: write       # provenance OIDC
@@ -62,7 +67,7 @@ jobs:
       # -- before provenance, the SBOM, publication and signing -- so that no
       # consumer of `release-dist` can ever see bytes PyPI does not serve.
       #
-      # Exactly three states, and each has one correct outcome:
+      # Exactly four states, and each has one correct outcome:
       #   ABSENT   this version has no PyPI files. First publication: keep this
       #            build, attest it, publish it, release it.
       #   COMPLETE PyPI's file set equals this build's exactly. Adopt the
@@ -353,7 +358,13 @@ jobs:
               print(f"{name}: not yet on PyPI; this run will upload it")
           sys.exit(1 if failed else 0)
           PY
+      # Skipped on the COMPLETE path: dist/ IS what PyPI already serves, so
+      # there is nothing to upload. Running the action anyway would mint and
+      # publicly log PEP 740 publish attestations for files it then skips --
+      # the orphan Rekor entries run 32427167884 left behind. The verification
+      # step below still runs, so COMPLETE still proves PyPI is correct.
       - name: Publish to PyPI (Trusted Publishing, OIDC)
+        if: needs.build.outputs.adopted != 'true'
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # release/v1
         with:
           packages-dir: dist
@@ -426,7 +437,14 @@ jobs:
     # workflow runs caused by its own GITHUB_TOKEN). A plain workflow_dispatch
     # republish (create_github_release left at its false default) must NOT
     # create a duplicate GitHub Release or trigger a second Zenodo deposit.
-    if: github.event_name == 'push' || github.event.inputs.create_github_release == 'true'
+    # Never on the COMPLETE path: that version's release already exists, and
+    # re-running this job would re-sign it and overwrite its asset set -- the
+    # exact mutable-release failure this workflow now exists to prevent. A
+    # same-run "Re-run failed jobs" recovery keeps the original build's
+    # adopted=false, so a release interrupted mid-run can still be completed.
+    if: >-
+      (github.event_name == 'push' || github.event.inputs.create_github_release == 'true')
+      && needs.build.outputs.adopted != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write       # create GitHub Release

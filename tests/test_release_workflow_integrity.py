@@ -389,6 +389,72 @@ def _exec_publish_check(
 # --------------------------------------------------------------------------
 
 
+ADOPTED_CLAUSE = "needs.build.outputs.adopted != 'true'"
+
+
+def _gate_admits(expression: str, adopted: str) -> bool:
+    """Would this `if:` let the step/job run, given that build output value?
+
+    Asserts the expression actually gates on the reconciliation result, then
+    evaluates that clause. `adopted` is '' when the output is unset, which is
+    how GitHub renders a job whose output was never written.
+    """
+    assert ADOPTED_CLAUSE in expression, f"{expression!r} does not gate on the adoption result"
+    return adopted != "true"
+
+
+def _publish_action_step() -> dict[str, Any]:
+    return next(
+        s
+        for s in _jobs()["publish-pypi"]["steps"]
+        if str(s.get("uses", "")).startswith("pypa/gh-action-pypi-publish@")
+    )
+
+
+def test_build_exposes_the_reconciliation_result_to_downstream_jobs() -> None:
+    assert _jobs()["build"]["outputs"] == {"adopted": "${{ steps.pypi.outputs.adopted }}"}
+
+
+def test_complete_adoption_skips_the_pypi_publishing_action() -> None:
+    """dist/ IS what PyPI serves, so uploading would only mint orphan attestations."""
+    assert not _gate_admits(_publish_action_step()["if"], "true")
+
+
+def test_complete_adoption_does_not_run_sign_and_release() -> None:
+    """Re-signing would overwrite the existing release's asset set."""
+    assert not _gate_admits(_jobs()["sign-and-release"]["if"], "true")
+
+
+def test_complete_adoption_still_verifies_pypi_end_to_end() -> None:
+    """Adoption is verification, so both hash checks must run ungated."""
+    steps = _jobs()["publish-pypi"]["steps"]
+    for marker in ("already on PyPI, sha256", "verified against PyPI"):
+        step = next(s for s in steps if marker in s.get("run", ""))
+        assert "if" not in step, f"{step['name']!r} must run on the adoption path too"
+
+
+def test_absent_still_publishes_and_releases() -> None:
+    """A first publication is unaffected by either gate."""
+    assert _gate_admits(_publish_action_step()["if"], "false")
+    assert _gate_admits(_jobs()["sign-and-release"]["if"], "false")
+    # The release gate keeps its original trigger condition alongside the new one.
+    gate = _jobs()["sign-and-release"]["if"]
+    assert "github.event_name == 'push'" in gate
+    assert "github.event.inputs.create_github_release == 'true'" in gate
+
+
+def test_same_run_failed_job_recovery_can_still_publish_and_release() -> None:
+    """Re-running failed jobs reuses the original build's output, not a new one.
+
+    That build saw ABSENT and emitted 'false' (or, if it never got that far,
+    nothing at all), so the missing PyPI member and the GitHub Release can
+    still be completed from the retained original release-dist.
+    """
+    for adopted in ("false", ""):
+        assert _gate_admits(_publish_action_step()["if"], adopted)
+        assert _gate_admits(_jobs()["sign-and-release"]["if"], adopted)
+
+
 def _step_index(steps: list[dict[str, Any]], predicate) -> int:
     return next(i for i, step in enumerate(steps) if predicate(step))
 
