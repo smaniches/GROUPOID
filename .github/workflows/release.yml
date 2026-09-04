@@ -298,8 +298,9 @@ jobs:
       # run 32427167884 did. This step supplies the missing comparison, and it
       # is the load-bearing check on the same-run retry path, where the build
       # job did not re-execute and dist/ is the ORIGINAL release-dist artifact:
-      # every filename PyPI already has must match it byte-for-byte, and only
-      # the genuinely missing files are left for the upload below.
+      # PyPI must hold no filename that artifact lacks, every filename it does
+      # hold must match byte-for-byte, and only then are the genuinely missing
+      # files left for the upload below.
       - name: Hash-verify already-published filenames before uploading
         shell: bash
         run: |
@@ -321,6 +322,22 @@ jobs:
               if exc.code != 404:
                   raise
               published = {}
+
+          # Checked first, and fatal on its own: the build job's CONFLICT guard
+          # is deliberately bypassed by a same-run "Re-run failed jobs", which
+          # does not re-execute build. This is then the only place an
+          # unexpected published filename can be caught, and it must be caught
+          # before any local gap is reported or offered to twine.
+          unexpected = sorted(set(published) - set(local))
+          if unexpected:
+              print(f"::error::CONFLICT: PyPI holds {unexpected} for "
+                    f"{project} {version}, which is not in this run's dist/. "
+                    "On a retry that dist/ is the retained original "
+                    "release-dist, so a file PyPI has and it does not cannot "
+                    "have come from the build this release is being assembled "
+                    "from. Refusing to upload or release anything for this "
+                    "version. Investigate the published file set by hand.")
+              sys.exit(1)
 
           failed = False
           for name in sorted(set(local) & set(published)):

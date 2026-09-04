@@ -312,6 +312,38 @@ def test_partial_recovery_by_same_run_retry_verifies_then_uploads_only_the_gap(
     assert f"{SDIST}: not yet on PyPI; this run will upload it" in out
 
 
+def test_publish_refuses_a_conflicting_file_set_on_the_same_run_retry_path(
+    tmp_path: Path,
+) -> None:
+    """The build job's CONFLICT guard is bypassed by "Re-run failed jobs".
+
+    That retry does not re-execute build, so dist/ is the retained original
+    release-dist and this pre-upload check is the only thing standing between
+    an unexpected published filename and a release. It must reject before the
+    local gap is reported, and long before twine sees anything.
+    """
+    extra = "groupoid-9.9.9-py3-none-manylinux1_x86_64.whl"
+    steps = _jobs()["publish-pypi"]["steps"]
+    guard_index = _step_index(steps, lambda s: "already on PyPI, sha256" in s.get("run", ""))
+    publish_index = _step_index(
+        steps, lambda s: str(s.get("uses", "")).startswith("pypa/gh-action-pypi-publish@")
+    )
+    # A non-zero exit here fails the job, and the upload is a later step.
+    assert guard_index < publish_index
+
+    # dist/ is the retained original release-dist; PyPI has the wheel (matching
+    # bytes) plus a file that build never produced, and lacks the sdist.
+    pypi = _FakePyPI({WHEEL: ORIGINAL[WHEEL], extra: b"a wheel this build never made"})
+    code, out = _exec_publish_check(tmp_path, _heredoc(steps[guard_index]), dict(ORIGINAL), pypi)
+
+    assert code == 1
+    assert "CONFLICT" in out
+    assert extra in out
+    # It must stop before deciding to publish the gap, not after.
+    assert "this run will upload it" not in out
+    assert SDIST not in out
+
+
 def test_publish_refuses_when_a_published_filename_holds_different_bytes(
     tmp_path: Path,
 ) -> None:
