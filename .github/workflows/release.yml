@@ -26,6 +26,11 @@ jobs:
   # job; the SBOM attestation runs in `attest-sbom`, which installs nothing.
   build:
     runs-on: ubuntu-latest
+    # COMPLETE means verification and adoption only. Downstream jobs read this
+    # to keep an adoption run from republishing or re-releasing a version that
+    # is already correct on PyPI.
+    outputs:
+      adopted: ${{ steps.pypi.outputs.adopted }}
     permissions:
       contents: read
       id-token: write       # provenance OIDC
@@ -53,7 +58,122 @@ jobs:
             echo "::error::expected exactly one release wheel, found ${#wheels[@]}"
             exit 1
           fi
+      # PyPI files are immutable; GitHub Release assets are not, and this build
+      # is not byte-reproducible (setuptools stamps wall-clock mtimes into the
+      # wheel zip and the sdist tar; SOURCE_DATE_EPOCH clamps the wheel but not
+      # the sdist). A rebuild of an already-published version is therefore
+      # content-identical but byte-different, and unguarded it goes on to
+      # replace release assets that did match PyPI. Reconcile against PyPI here
+      # -- before provenance, the SBOM, publication and signing -- so that no
+      # consumer of `release-dist` can ever see bytes PyPI does not serve.
+      #
+      # Exactly four states, and each has one correct outcome:
+      #   ABSENT   this version has no PyPI files. First publication: keep this
+      #            build, attest it, publish it, release it.
+      #   COMPLETE PyPI's file set equals this build's exactly. Adopt the
+      #            published bytes verbatim; this run publishes nothing new.
+      #   CONFLICT PyPI holds a filename this build did not produce. The
+      #            published set is not the one this workflow builds, so
+      #            nothing can be adopted without guessing. Fail closed
+      #            before downloading anything.
+      #   PARTIAL  PyPI holds some but not all of them. Completing the version
+      #            from THIS build would pair an original artifact with one from
+      #            a different build, and would then attest and release that
+      #            mixture. Fail closed and send the operator back to the run
+      #            that produced the published files, whose release-dist
+      #            artifact still holds the original missing member.
+      #
+      # This step is reached only when the build job runs, i.e. on a fresh
+      # dispatch, a tag push, or "Re-run all jobs". Re-running only the FAILED
+      # jobs of the original run does not re-execute build, so the retained
+      # original release-dist is reused untouched and this guard is correctly
+      # bypassed -- that is the supported recovery path for PARTIAL.
+      #
+      # No wheel is installed and no project code runs, so this job's isolation
+      # from the runtime dependency graph is unchanged.
+      - name: Reconcile dist against PyPI (absent / complete / partial)
+        id: pypi
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json, os, pathlib, sys, urllib.error, urllib.request
+
+          dist = pathlib.Path("dist")
+          built = sorted(p.name for p in dist.iterdir() if p.is_file())
+          wheel = next(n for n in built if n.endswith(".whl"))
+          project, version = wheel.split("-")[0], wheel.split("-")[1]
+
+          def emit(adopted):
+              with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+                  fh.write(f"adopted={'true' if adopted else 'false'}\n")
+
+          try:
+              meta = json.load(urllib.request.urlopen(
+                  f"https://pypi.org/pypi/{project}/{version}/json", timeout=60))
+              published = {u["filename"]: (u["digests"]["sha256"], u["url"])
+                           for u in meta["urls"]}
+          except urllib.error.HTTPError as exc:
+              if exc.code != 404:
+                  raise
+              published = {}
+
+          if not published:
+              print(f"ABSENT: {project} {version} has no files on PyPI. "
+                    "Publishing this build as its first publication.")
+              emit(False)
+              sys.exit(0)
+
+          unexpected = sorted(name for name in published if name not in built)
+          if unexpected:
+              print(f"::error::CONFLICT: PyPI holds {unexpected} for "
+                    f"{project} {version}, which this build did not produce. "
+                    "This version's published file set is not the one this "
+                    "workflow builds, so nothing here can be adopted or "
+                    "reconciled without guessing. Refusing before downloading "
+                    "anything. Investigate the published file set by hand.")
+              sys.exit(1)
+
+          missing = sorted(name for name in built if name not in published)
+          if missing:
+              print(f"::error::PARTIAL: PyPI holds {sorted(published)} for "
+                    f"{project} {version} but not {missing}. Those published "
+                    "files are immutable and came from a different build than "
+                    "this one, so completing the version from this build would "
+                    "publish, attest and release a mixture of two builds. "
+                    "Refusing. Recover instead by re-running the FAILED JOBS of "
+                    "the workflow run that published the existing files: that "
+                    "does not re-execute this build job, so its retained "
+                    "release-dist artifact supplies the original missing "
+                    "member. Do not use 'Re-run all jobs' and do not dispatch "
+                    "this workflow again for this version.")
+              sys.exit(1)
+
+          # Reaching here means set(published) == set(built) exactly: nothing
+          # missing (PARTIAL) and nothing extra (CONFLICT).
+          print(f"::warning::COMPLETE: {project} {version} is already fully "
+                f"published on PyPI as {sorted(published)}. Those files are "
+                "immutable, so this run discards its own rebuild and adopts "
+                "the published bytes verbatim.")
+          for name, (want, href) in sorted(published.items()):
+              blob = urllib.request.urlopen(href, timeout=300).read()
+              got = hashlib.sha256(blob).hexdigest()
+              if got != want:
+                  print(f"::error::{name}: downloaded sha256 {got} != PyPI "
+                        f"sha256 {want}")
+                  sys.exit(1)
+              (dist / name).write_bytes(blob)
+              print(f"{name}: sha256 {got} (adopted from PyPI)")
+          emit(True)
+          PY
+      # Build provenance asserts that THIS run produced these bytes. On the
+      # COMPLETE path it did not -- it downloaded them -- and PyPI already holds
+      # the PEP 740 provenance for those exact digests. Minting a second, false
+      # SLSA statement here would be the opposite of the integrity this job
+      # exists to provide. ABSENT still attests, because there the run really
+      # did build the artifacts; PARTIAL never reaches this step.
       - name: Provenance attestation (dist)
+        if: steps.pypi.outputs.adopted != 'true'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8  # v4.2.2
         with:
           subject-path: "dist/*"
@@ -148,7 +268,16 @@ jobs:
         with:
           name: release-sbom
           path: .
+      # Skipped on the COMPLETE path. The SBOM above is regenerated with
+      # today's dependency resolution, so it can name different transitive
+      # versions than the closure the released wheel was published with;
+      # attesting it would mint permanent evidence for a graph that is not the
+      # one shipped. Generating and binding it still runs as transient
+      # verification of the adopted wheel -- only the permanent record is
+      # withheld. Only this step is gated, never the job: publish-pypi needs
+      # it to complete so its post-PyPI verification still runs on COMPLETE.
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6  # v4.2.2
+        if: needs.build.outputs.adopted != 'true'
         env:
           NODE_OPTIONS: '--max-http-header-size=32768'
         with:
@@ -177,24 +306,154 @@ jobs:
         with:
           name: release-dist
           path: dist
+      # `skip-existing` decides purely on the server's 409; twine never fetches
+      # a remote digest, so on its own it will happily skip a file whose bytes
+      # differ from the published one and report success. That is exactly what
+      # run 32427167884 did. This step supplies the missing comparison, and it
+      # is the load-bearing check on the same-run retry path, where the build
+      # job did not re-execute and dist/ is the ORIGINAL release-dist artifact:
+      # PyPI must hold no filename that artifact lacks, every filename it does
+      # hold must match byte-for-byte, and only then are the genuinely missing
+      # files left for the upload below.
+      - name: Hash-verify already-published filenames before uploading
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, pathlib, sys, urllib.error, urllib.request
+
+          dist = pathlib.Path("dist")
+          local = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+                   for p in sorted(dist.iterdir()) if p.is_file()}
+          wheel = next(n for n in local if n.endswith(".whl"))
+          project, version = wheel.split("-")[0], wheel.split("-")[1]
+
+          try:
+              meta = json.load(urllib.request.urlopen(
+                  f"https://pypi.org/pypi/{project}/{version}/json", timeout=60))
+              published = {u["filename"]: u["digests"]["sha256"] for u in meta["urls"]}
+          except urllib.error.HTTPError as exc:
+              if exc.code != 404:
+                  raise
+              published = {}
+
+          # Checked first, and fatal on its own: the build job's CONFLICT guard
+          # is deliberately bypassed by a same-run "Re-run failed jobs", which
+          # does not re-execute build. This is then the only place an
+          # unexpected published filename can be caught, and it must be caught
+          # before any local gap is reported or offered to twine.
+          unexpected = sorted(set(published) - set(local))
+          if unexpected:
+              print(f"::error::CONFLICT: PyPI holds {unexpected} for "
+                    f"{project} {version}, which is not in this run's dist/. "
+                    "On a retry that dist/ is the retained original "
+                    "release-dist, so a file PyPI has and it does not cannot "
+                    "have come from the build this release is being assembled "
+                    "from. Refusing to upload or release anything for this "
+                    "version. Investigate the published file set by hand.")
+              sys.exit(1)
+
+          failed = False
+          for name in sorted(set(local) & set(published)):
+              if local[name] != published[name]:
+                  print(f"::error::{name} is already on PyPI with sha256 "
+                        f"{published[name]}, but this run holds {local[name]}. "
+                        "PyPI files are immutable; refusing to publish or "
+                        "release bytes that differ from the published artifact.")
+                  failed = True
+              else:
+                  print(f"{name}: already on PyPI, sha256 {local[name]} verified")
+          for name in sorted(set(local) - set(published)):
+              print(f"{name}: not yet on PyPI; this run will upload it")
+          sys.exit(1 if failed else 0)
+          PY
+      # Skipped on the COMPLETE path: dist/ IS what PyPI already serves, so
+      # there is nothing to upload. Running the action anyway would mint and
+      # publicly log PEP 740 publish attestations for files it then skips --
+      # the orphan Rekor entries run 32427167884 left behind. The verification
+      # step below still runs, so COMPLETE still proves PyPI is correct.
       - name: Publish to PyPI (Trusted Publishing, OIDC)
+        if: needs.build.outputs.adopted != 'true'
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # release/v1
         with:
           packages-dir: dist
           print-hash: true
           # Idempotent: a re-dispatch or an out-of-band manual republish of a
-          # version already on PyPI should not fail the job.
+          # version already on PyPI should not fail the job. Safe only because
+          # the step above has already proved that every filename PyPI holds is
+          # byte-identical to this run's copy, so what twine skips here can no
+          # longer be a divergent artifact.
           skip-existing: true
+      # Closes the loop the other direction: after the upload, every file this
+      # run is about to attach to the GitHub Release must be on PyPI under the
+      # same name AND the same SHA-256, and PyPI must hold nothing else for
+      # this version.
+      - name: Verify the complete PyPI file set against these exact bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, pathlib, sys, time, urllib.error, urllib.request
+
+          dist = pathlib.Path("dist")
+          local = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+                   for p in sorted(dist.iterdir()) if p.is_file()}
+          wheel = next(n for n in local if n.endswith(".whl"))
+          project, version = wheel.split("-")[0], wheel.split("-")[1]
+          url = f"https://pypi.org/pypi/{project}/{version}/json"
+
+          published = {}
+          for attempt in range(6):
+              if attempt:
+                  time.sleep(10)
+              try:
+                  meta = json.load(urllib.request.urlopen(url, timeout=60))
+              except urllib.error.HTTPError as exc:
+                  if exc.code != 404:
+                      raise
+                  continue
+              published = {u["filename"]: u["digests"]["sha256"] for u in meta["urls"]}
+              if set(local) <= set(published):
+                  break
+
+          failed = False
+          for name in sorted(set(local) - set(published)):
+              print(f"::error::{name} is absent from PyPI after publication")
+              failed = True
+          for name in sorted(set(published) - set(local)):
+              print(f"::error::PyPI holds {name} for {project} {version}, which "
+                    "this run neither built nor adopted")
+              failed = True
+          for name in sorted(set(local) & set(published)):
+              if local[name] != published[name]:
+                  print(f"::error::{name}: local sha256 {local[name]} != PyPI "
+                        f"sha256 {published[name]}")
+                  failed = True
+              else:
+                  print(f"{name}: sha256 {local[name]} verified against PyPI")
+          sys.exit(1 if failed else 0)
+          PY
 
   sign-and-release:
-    needs: [build, sbom, attest-sbom]
+    # publish-pypi is a hard dependency, not a peer: the assets attached here
+    # are exactly the bytes PyPI has accepted and this run has re-verified
+    # against PyPI, so a GitHub Release can never be created ahead of -- or
+    # instead of -- the publication whose bytes it claims to mirror.
+    needs: [build, sbom, attest-sbom, publish-pypi]
     # On a real tag push, or an explicit request via create_github_release=true
     # (see auto-tag-release.yml, which dispatches this workflow with that flag
     # set for a version's first release, since GitHub suppresses push-triggered
     # workflow runs caused by its own GITHUB_TOKEN). A plain workflow_dispatch
     # republish (create_github_release left at its false default) must NOT
     # create a duplicate GitHub Release or trigger a second Zenodo deposit.
-    if: github.event_name == 'push' || github.event.inputs.create_github_release == 'true'
+    # Never on the COMPLETE path: that version's release already exists, and
+    # re-running this job would re-sign it and overwrite its asset set -- the
+    # exact mutable-release failure this workflow now exists to prevent. A
+    # same-run "Re-run failed jobs" recovery keeps the original build's
+    # adopted=false, so a release interrupted mid-run can still be completed.
+    if: >-
+      (github.event_name == 'push' || github.event.inputs.create_github_release == 'true')
+      && needs.build.outputs.adopted != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write       # create GitHub Release
@@ -209,6 +468,21 @@ jobs:
         with:
           name: release-sbom
           path: .
+      # `ref` is a free-text input and github.ref_name is a branch name on a
+      # dispatch, so without this a blank or wrong input creates a release
+      # tagged after a branch (e.g. "main") instead of the version.
+      - name: Assert the release target is a version tag that exists
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.ref || github.ref_name }}
+        run: |
+          set -euo pipefail
+          case "${RELEASE_TAG}" in
+            v[0-9]*) ;;
+            *) echo "::error::refusing to create a GitHub Release for '${RELEASE_TAG}': not a v<version> tag"; exit 1 ;;
+          esac
+          git fetch --no-tags origin "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
+          echo "release target ${RELEASE_TAG} -> $(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}")"
       - name: Sign artifacts with Sigstore
         uses: sigstore/gh-action-sigstore-python@790bc6befb9d733738f18d8f895854b453640ec9  # v3.5.0
         with:
