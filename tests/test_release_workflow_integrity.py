@@ -24,8 +24,17 @@ import yaml
 WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "release.yml"
 
 
+def _workflow() -> dict[str, Any]:
+    return yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+
+
 def _jobs() -> dict[str, Any]:
-    return yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]
+    return _workflow()["jobs"]
+
+
+def _on() -> dict[str, Any]:
+    # PyYAML resolves the bare `on:` key to the boolean True.
+    return _workflow()[True]
 
 
 def _needs(job: dict[str, Any]) -> set[str]:
@@ -387,6 +396,99 @@ def _exec_publish_check(
 # --------------------------------------------------------------------------
 # Shape guards for the parts that are wiring rather than logic.
 # --------------------------------------------------------------------------
+
+
+CONCURRENCY_EXPRESSION = "${{ github.event.inputs.ref || github.ref_name }}"
+
+
+def _concurrency_key(event: str, ref_name: str, inputs_ref: str | None = None) -> str:
+    """Render the workflow's concurrency group for one concrete event context.
+
+    Pins the shipped expression, then evaluates it. GitHub's `a || b` yields b
+    when a is null or the empty string, and `github.event.inputs` exists only on
+    a workflow_dispatch, so on a push the input side is always absent.
+    """
+    group = _workflow()["concurrency"]["group"]
+    prefix, marker, rest = group.partition("${{")
+    assert marker, f"concurrency group {group!r} interpolates nothing"
+    assert f"{marker}{rest}" == CONCURRENCY_EXPRESSION, f"unexpected expression in {group!r}"
+    supplied = (inputs_ref or "") if event == "workflow_dispatch" else ""
+    return prefix + (supplied or ref_name)
+
+
+def test_the_dispatch_ref_input_is_the_optional_string_this_key_assumes() -> None:
+    """The key is only correct if `ref` really is an optional, defaulted string."""
+    ref_input = _on()["workflow_dispatch"]["inputs"]["ref"]
+    assert ref_input["required"] is False
+    assert ref_input["default"] == ""
+    # No `type:` means string; a boolean or choice input would render differently.
+    assert "type" not in ref_input
+
+
+def test_same_version_serializes_across_tag_push_and_dispatch() -> None:
+    """The race: two runs for one version must never publish concurrently."""
+    from_push = _concurrency_key("push", ref_name="v0.1.0.dev5")
+    from_dispatch = _concurrency_key(
+        "workflow_dispatch", ref_name="main", inputs_ref="v0.1.0.dev5"
+    )
+    assert from_push == from_dispatch == "groupoid-release-v0.1.0.dev5"
+
+
+def test_a_blank_dispatch_ref_falls_back_to_the_event_ref() -> None:
+    assert (
+        _concurrency_key("workflow_dispatch", ref_name="main", inputs_ref="")
+        == "groupoid-release-main"
+    )
+
+
+def test_different_versions_do_not_block_each_other() -> None:
+    keys = {
+        _concurrency_key("push", ref_name="v0.1.0.dev5"),
+        _concurrency_key("push", ref_name="v0.1.0.dev6"),
+        _concurrency_key("workflow_dispatch", ref_name="main", inputs_ref="v0.1.0.dev6"),
+    }
+    assert len(keys) == 2, keys
+
+
+def test_the_group_is_namespaced_to_this_workflow() -> None:
+    group = _workflow()["concurrency"]["group"]
+    assert group.startswith("groupoid-release-")
+
+
+def test_a_waiting_run_never_cancels_one_that_may_be_publishing() -> None:
+    assert _workflow()["concurrency"]["cancel-in-progress"] is False
+
+
+def test_the_lock_is_workflow_level_not_job_level() -> None:
+    """Job-level locks would leave reconciliation outside the critical section."""
+    workflow = _workflow()
+    assert "concurrency" in workflow
+    for name, job in workflow["jobs"].items():
+        assert "concurrency" not in job, f"job {name} narrows the lock"
+
+
+def test_the_four_reconciliation_states_are_unchanged(tmp_path: Path) -> None:
+    """Serializing runs must not alter what a single run decides."""
+    extra = "groupoid-9.9.9-py3-none-manylinux1_x86_64.whl"
+    cases = {
+        "ABSENT": (_FakePyPI({}), 0, dict(REBUILD), "false"),
+        "COMPLETE": (_FakePyPI(dict(ORIGINAL)), 0, dict(ORIGINAL), "true"),
+        "PARTIAL": (_FakePyPI({WHEEL: ORIGINAL[WHEEL]}), 1, dict(REBUILD), None),
+        "CONFLICT": (
+            _FakePyPI({**ORIGINAL, extra: b"never built here"}),
+            1,
+            dict(REBUILD),
+            None,
+        ),
+    }
+    for index, (state, (pypi, want_code, want_dist, want_adopted)) in enumerate(cases.items()):
+        case_dir = tmp_path / str(index)
+        case_dir.mkdir()
+        code, out, dist, outputs = _exec_reconcile(case_dir, dict(REBUILD), pypi)
+        assert code == want_code, f"{state}: exit {code}"
+        assert state in out, f"{state} not reported: {out}"
+        assert dist == want_dist, f"{state}: wrong dist/"
+        assert outputs.get("adopted") == want_adopted, f"{state}: adopted={outputs.get('adopted')}"
 
 
 ADOPTED_CLAUSE = "needs.build.outputs.adopted != 'true'"

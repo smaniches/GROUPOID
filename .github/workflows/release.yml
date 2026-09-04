@@ -19,6 +19,37 @@ on:
 permissions:
   contents: read
 
+# Serialize every run that targets the same release version, end to end.
+#
+# Without this, two runs for the same not-yet-published version can both see
+# ABSENT, build byte-different artifacts, both pass the pre-upload hash check
+# (which finds nothing published to compare against), and then upload
+# concurrently. twine's --skip-existing decides per file, so the wheel from one
+# build and the sdist from the other can both land, leaving PyPI holding
+# immutable artifacts from two different builds. The post-publication check
+# would then only report the corruption after it is permanent.
+#
+# The key is the effective release target, normalized so a tag push and a
+# workflow_dispatch aimed at the same version share it:
+#   push of tag v0.1.0.dev5 -> github.event.inputs is null, github.ref_name is
+#                              "v0.1.0.dev5"
+#   dispatch ref=v0.1.0.dev5 -> the input wins, also "v0.1.0.dev5"
+#   dispatch with a blank ref -> falls back to the dispatch branch name
+# github.ref_name, not github.ref: github.ref would be "refs/tags/v0.1.0.dev5"
+# on the push and "v0.1.0.dev5" on the dispatch, which are different strings
+# and would not serialize against each other. (The build job's checkout uses
+# github.ref because there both forms resolve to the same commit; a
+# concurrency key is compared literally, so it needs the normalized form.)
+# A different version yields a different group and is never blocked.
+#
+# cancel-in-progress is false on purpose: a second same-version run must wait,
+# never cancel a run that may already be mid-publication. Workflow level, not
+# job level, so the lock spans reconciliation through publication and signing
+# rather than only the upload.
+concurrency:
+  group: groupoid-release-${{ github.event.inputs.ref || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   # Privilege separation: this job holds the attestation credentials, so it
   # must never install the built wheel or resolve its runtime dependency
