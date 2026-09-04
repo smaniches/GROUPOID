@@ -425,6 +425,28 @@ def test_complete_adoption_does_not_run_sign_and_release() -> None:
     assert not _gate_admits(_jobs()["sign-and-release"]["if"], "true")
 
 
+def test_complete_adoption_does_not_mint_a_new_sbom_attestation() -> None:
+    """The SBOM is regenerated with today's resolution, so it can name
+
+    different transitive versions than the closure the released wheel shipped
+    with. Attesting it on an adoption run would record permanent evidence for
+    a graph that was never released.
+    """
+    attest = _attest_sbom_steps(_jobs()["attest-sbom"])[0]
+    assert not _gate_admits(attest["if"], "true")
+
+
+def test_the_attest_sbom_job_itself_is_never_gated() -> None:
+    """publish-pypi needs this job to complete for its verification to run."""
+    assert "if" not in _jobs()["attest-sbom"]
+
+
+def test_absent_and_recovery_still_mint_the_sbom_attestation() -> None:
+    attest = _attest_sbom_steps(_jobs()["attest-sbom"])[0]
+    for adopted in ("false", ""):
+        assert _gate_admits(attest["if"], adopted)
+
+
 def test_complete_adoption_still_verifies_pypi_end_to_end() -> None:
     """Adoption is verification, so both hash checks must run ungated."""
     steps = _jobs()["publish-pypi"]["steps"]

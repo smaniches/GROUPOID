@@ -268,7 +268,16 @@ jobs:
         with:
           name: release-sbom
           path: .
+      # Skipped on the COMPLETE path. The SBOM above is regenerated with
+      # today's dependency resolution, so it can name different transitive
+      # versions than the closure the released wheel was published with;
+      # attesting it would mint permanent evidence for a graph that is not the
+      # one shipped. Generating and binding it still runs as transient
+      # verification of the adopted wheel -- only the permanent record is
+      # withheld. Only this step is gated, never the job: publish-pypi needs
+      # it to complete so its post-PyPI verification still runs on COMPLETE.
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6  # v4.2.2
+        if: needs.build.outputs.adopted != 'true'
         env:
           NODE_OPTIONS: '--max-http-header-size=32768'
         with:
