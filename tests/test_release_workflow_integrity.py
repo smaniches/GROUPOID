@@ -476,6 +476,56 @@ def test_a_blank_or_branch_dispatch_ref_cannot_reach_publication() -> None:
         assert not _guard_admits(target), f"guard admitted {target!r}"
 
 
+def _version_guard() -> dict[str, Any]:
+    return next(
+        s
+        for s in _jobs()["build"]["steps"]
+        if "does not name the version this commit publishes" in s.get("run", "")
+    )
+
+
+def _version_guard_admits(target: str, pyproject_version: str, tmp_path: Path) -> bool:
+    """Execute the correspondence guard against a real pyproject.toml."""
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "pyproject.toml").write_text(
+        f'[project]\nversion = "{pyproject_version}"\n', encoding="utf-8"
+    )
+    completed = subprocess.run(
+        ["bash", "-c", _version_guard()["run"]],
+        cwd=tmp_path,
+        env={**os.environ, "RELEASE_TARGET": target},
+        capture_output=True,
+        text=True,
+    )
+    return completed.returncode == 0
+
+
+def test_the_tag_must_name_the_version_the_commit_publishes(tmp_path: Path) -> None:
+    """Shape alone is not enough: an alias tag would key a different group.
+
+    v0.1.0.dev5-retry matches v[0-9]* and could point at the same commit, so
+    without this the same version could be published from two groups.
+    """
+    assert _version_guard_admits("v0.1.0.dev5", "0.1.0.dev5", tmp_path / "ok")
+    for alias in ("v0.1.0.dev5-retry", "v0.1.0.dev5.1", "v0.1.0.dev6", "v0.1.0"):
+        assert not _version_guard_admits(
+            alias, "0.1.0.dev5", tmp_path / alias.replace("/", "_")
+        ), f"guard admitted alias {alias!r}"
+
+
+def test_the_correspondence_guard_runs_after_checkout_and_before_the_build(
+    tmp_path: Path,
+) -> None:
+    names = [s.get("name") or str(s.get("uses", "")) for s in _jobs()["build"]["steps"]]
+    checkout = next(i for i, n in enumerate(names) if n.startswith("actions/checkout@"))
+    guard = names.index(_version_guard()["name"])
+    build = names.index("Build sdist + wheel")
+    assert checkout < guard < build
+    assert _version_guard()["env"]["RELEASE_TARGET"] == (
+        "${{ github.event.inputs.ref || github.ref_name }}"
+    )
+
+
 def test_the_guard_admits_exactly_the_targets_the_key_serializes() -> None:
     for target in ("v0.1.0.dev5", "v0.1.0.dev6", "v1.0.0"):
         assert _guard_admits(target), f"guard rejected {target!r}"

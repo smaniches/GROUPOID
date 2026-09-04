@@ -43,12 +43,14 @@ permissions:
 #
 # A concurrency group can only key on the ref, while the version that reaches
 # PyPI comes from pyproject.toml at whatever commit was checked out. Those are
-# only in bijection if every run that can publish names its version tag
-# exactly, so the build job's first step asserts that shape before anything is
-# built. Without it a dispatch that left `ref` blank would key on the branch
-# name while building the very same version main's pyproject.toml holds -- the
-# tag auto-tag-release.yml cuts is literally "v" + that field -- and would race
-# the tag-keyed run straight through to publication.
+# only in bijection if every run that can publish is named exactly for the
+# version it publishes, so the build job asserts that before building: first
+# that the target is a v<version> tag at all, then that it equals "v" plus this
+# commit's version. Without the first, a dispatch that left `ref` blank would
+# key on the branch name while building the very version main's pyproject.toml
+# holds. Without the second, an alias tag like v0.1.0.dev5-retry on the same
+# commit would pass the shape check and key a different group for one version.
+# Either would race the tag-keyed run straight through to publication.
 #
 # cancel-in-progress is false on purpose: a second same-version run waits,
 # never cancels a run that may already be mid-publication. Only one run is kept
@@ -105,6 +107,30 @@ jobs:
         with:
           ref: ${{ github.event.inputs.ref || github.ref }}
           fetch-depth: 0
+      # The shape check above is necessary but not sufficient: v[0-9]* also
+      # matches an alias like v0.1.0.dev5-retry, which could point at the same
+      # commit, build the same version, and sit in a different concurrency
+      # group. This makes target and version a bijection: the tag must be
+      # exactly "v" plus the version this commit will publish, so two runs that
+      # publish one version necessarily share one group. Same derivation as
+      # auto-tag-release.yml, which builds the tag as "v${version}" from this
+      # field, so every tag that automation cuts satisfies it by construction.
+      - name: Assert the tag names the version this commit publishes
+        shell: bash
+        env:
+          RELEASE_TARGET: ${{ github.event.inputs.ref || github.ref_name }}
+        run: |
+          set -euo pipefail
+          version=$(grep -m1 '^version = "' pyproject.toml | sed -E 's/version = "(.*)"/\1/')
+          if [ -z "${version}" ]; then
+            echo "::error::could not extract a version from pyproject.toml"
+            exit 1
+          fi
+          if [ "${RELEASE_TARGET}" != "v${version}" ]; then
+            echo "::error::release target '${RELEASE_TARGET}' does not name the version this commit publishes ('${version}', so the tag must be exactly 'v${version}'). Two differently named targets building one version would land in different concurrency groups and could publish it concurrently."
+            exit 1
+          fi
+          echo "release target ${RELEASE_TARGET} matches pyproject version ${version}"
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: "3.12"
