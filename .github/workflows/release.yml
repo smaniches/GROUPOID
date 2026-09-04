@@ -65,8 +65,12 @@ jobs:
       # Exactly three states, and each has one correct outcome:
       #   ABSENT   this version has no PyPI files. First publication: keep this
       #            build, attest it, publish it, release it.
-      #   COMPLETE PyPI already holds every file this build produced. Adopt the
+      #   COMPLETE PyPI's file set equals this build's exactly. Adopt the
       #            published bytes verbatim; this run publishes nothing new.
+      #   CONFLICT PyPI holds a filename this build did not produce. The
+      #            published set is not the one this workflow builds, so
+      #            nothing can be adopted without guessing. Fail closed
+      #            before downloading anything.
       #   PARTIAL  PyPI holds some but not all of them. Completing the version
       #            from THIS build would pair an original artifact with one from
       #            a different build, and would then attest and release that
@@ -115,6 +119,16 @@ jobs:
               emit(False)
               sys.exit(0)
 
+          unexpected = sorted(name for name in published if name not in built)
+          if unexpected:
+              print(f"::error::CONFLICT: PyPI holds {unexpected} for "
+                    f"{project} {version}, which this build did not produce. "
+                    "This version's published file set is not the one this "
+                    "workflow builds, so nothing here can be adopted or "
+                    "reconciled without guessing. Refusing before downloading "
+                    "anything. Investigate the published file set by hand.")
+              sys.exit(1)
+
           missing = sorted(name for name in built if name not in published)
           if missing:
               print(f"::error::PARTIAL: PyPI holds {sorted(published)} for "
@@ -130,6 +144,8 @@ jobs:
                     "this workflow again for this version.")
               sys.exit(1)
 
+          # Reaching here means set(published) == set(built) exactly: nothing
+          # missing (PARTIAL) and nothing extra (CONFLICT).
           print(f"::warning::COMPLETE: {project} {version} is already fully "
                 f"published on PyPI as {sorted(published)}. Those files are "
                 "immutable, so this run discards its own rebuild and adopts "

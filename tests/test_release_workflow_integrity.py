@@ -269,6 +269,27 @@ def test_state_partial_fresh_dispatch_fails_and_never_completes_from_a_rebuild(
     assert pypi.file_reads == [], "a partial state must not download anything"
 
 
+def test_state_conflict_fails_closed_when_pypi_holds_a_file_this_build_did_not_make(
+    tmp_path: Path,
+) -> None:
+    """COMPLETE is exact set equality, not `built` being a subset of `published`.
+
+    PyPI holding an extra filename means the published set is not the one this
+    workflow builds. Adopting it would attach a file to the release that no
+    build here produced, so the run stops before downloading anything.
+    """
+    extra = "groupoid-9.9.9-py3-none-manylinux1_x86_64.whl"
+    pypi = _FakePyPI({**ORIGINAL, extra: b"a wheel this build never made"})
+    code, out, dist, outputs = _exec_reconcile(tmp_path, dict(REBUILD), pypi)
+
+    assert code == 1
+    assert "CONFLICT" in out
+    assert extra in out
+    assert "adopted" not in outputs
+    assert pypi.file_reads == [], "a conflicting file set must not be downloaded"
+    assert dist == REBUILD, "dist/ must be left exactly as built"
+
+
 def test_partial_recovery_by_same_run_retry_verifies_then_uploads_only_the_gap(
     tmp_path: Path,
 ) -> None:
