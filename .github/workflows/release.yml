@@ -19,7 +19,7 @@ on:
 permissions:
   contents: read
 
-# Serialize every run that targets the same release version, end to end.
+# Serialize every run that can publish the same release version, end to end.
 #
 # Without this, two runs for the same not-yet-published version can both see
 # ABSENT, build byte-different artifacts, both pass the pre-upload hash check
@@ -34,18 +34,32 @@ permissions:
 #   push of tag v0.1.0.dev5 -> github.event.inputs is null, github.ref_name is
 #                              "v0.1.0.dev5"
 #   dispatch ref=v0.1.0.dev5 -> the input wins, also "v0.1.0.dev5"
-#   dispatch with a blank ref -> falls back to the dispatch branch name
 # github.ref_name, not github.ref: github.ref would be "refs/tags/v0.1.0.dev5"
 # on the push and "v0.1.0.dev5" on the dispatch, which are different strings
-# and would not serialize against each other. (The build job's checkout uses
-# github.ref because there both forms resolve to the same commit; a
-# concurrency key is compared literally, so it needs the normalized form.)
-# A different version yields a different group and is never blocked.
+# and would not serialize against each other. (The build job's checkout can use
+# github.ref because there both spellings resolve to the same commit; a
+# concurrency key is compared as a literal string, so it needs the normalized
+# form.) A different version yields a different group and is never blocked.
 #
-# cancel-in-progress is false on purpose: a second same-version run must wait,
-# never cancel a run that may already be mid-publication. Workflow level, not
-# job level, so the lock spans reconciliation through publication and signing
-# rather than only the upload.
+# A concurrency group can only key on the ref, while the version that reaches
+# PyPI comes from pyproject.toml at whatever commit was checked out. Those are
+# only in bijection if every run that can publish names its version tag
+# exactly, so the build job's first step asserts that shape before anything is
+# built. Without it a dispatch that left `ref` blank would key on the branch
+# name while building the very same version main's pyproject.toml holds -- the
+# tag auto-tag-release.yml cuts is literally "v" + that field -- and would race
+# the tag-keyed run straight through to publication.
+#
+# cancel-in-progress is false on purpose: a second same-version run waits,
+# never cancels a run that may already be mid-publication. Only one run is kept
+# pending per group, so a third same-version run displaces the waiting second;
+# that errs toward doing less, never toward two concurrent publications.
+# Workflow level, not job level, so the lock spans reconciliation through
+# publication and signing rather than only the upload.
+#
+# Known limit, inherent to Actions rather than to this block: a run started
+# against an existing tag executes that tag's copy of this file, and tags cut
+# before this landed have no concurrency block. It applies from the next tag on.
 concurrency:
   group: groupoid-release-${{ github.event.inputs.ref || github.ref_name }}
   cancel-in-progress: false
@@ -67,6 +81,26 @@ jobs:
       id-token: write       # provenance OIDC
       attestations: write   # actions/attest-build-provenance
     steps:
+      # First, before anything is checked out or built. The concurrency group
+      # above can only key on the ref, but what reaches PyPI is the version in
+      # pyproject.toml at the checked-out commit. Rejecting every target that
+      # is not a version tag is what keeps those two in step: after this, any
+      # run that can publish is named exactly for the version it publishes, so
+      # same version implies same group. A blank or branch `ref` on a dispatch,
+      # or a non-canonical spelling like refs/tags/v1.2.3, dies here instead of
+      # racing the tag-keyed run to the upload. sign-and-release asserts the
+      # same shape again, but only after publication, which is too late to
+      # protect PyPI.
+      - name: Assert this run targets a version tag
+        shell: bash
+        env:
+          RELEASE_TARGET: ${{ github.event.inputs.ref || github.ref_name }}
+        run: |
+          set -euo pipefail
+          case "${RELEASE_TARGET}" in
+            v[0-9]*) echo "release target: ${RELEASE_TARGET}" ;;
+            *) echo "::error::refusing to build or publish for '${RELEASE_TARGET}': not a v<version> tag. Dispatch with ref set to the exact tag (e.g. v0.1.0.dev5); a blank or branch ref would publish a version this run is not named for and would not serialize against the tag's own run."; exit 1 ;;
+          esac
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           ref: ${{ github.event.inputs.ref || github.ref }}

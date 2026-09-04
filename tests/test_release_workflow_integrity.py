@@ -13,6 +13,7 @@ import hashlib
 import io
 import json
 import os
+import subprocess
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -434,11 +435,50 @@ def test_same_version_serializes_across_tag_push_and_dispatch() -> None:
     assert from_push == from_dispatch == "groupoid-release-v0.1.0.dev5"
 
 
-def test_a_blank_dispatch_ref_falls_back_to_the_event_ref() -> None:
-    assert (
-        _concurrency_key("workflow_dispatch", ref_name="main", inputs_ref="")
-        == "groupoid-release-main"
+def _release_target_guard() -> dict[str, Any]:
+    return next(s for s in _jobs()["build"]["steps"] if "not a v<version> tag" in s.get("run", ""))
+
+
+def _guard_admits(target: str) -> bool:
+    """Evaluate the build guard's shell `case` for one effective target."""
+    body = _release_target_guard()["run"]
+    assert "v[0-9]*)" in body, f"guard does not match on a version tag: {body}"
+    completed = subprocess.run(
+        ["bash", "-c", body],
+        env={**os.environ, "RELEASE_TARGET": target},
+        capture_output=True,
+        text=True,
     )
+    return completed.returncode == 0
+
+
+def test_the_guard_runs_before_anything_is_checked_out_or_built() -> None:
+    """The key is only trustworthy if non-tag targets die before publication."""
+    steps = _jobs()["build"]["steps"]
+    assert steps[0]["name"] == _release_target_guard()["name"]
+    assert str(steps[1].get("uses", "")).startswith("actions/checkout@")
+    assert _release_target_guard()["env"]["RELEASE_TARGET"] == (
+        "${{ github.event.inputs.ref || github.ref_name }}"
+    )
+
+
+def test_a_blank_or_branch_dispatch_ref_cannot_reach_publication() -> None:
+    """The residual race: a blank ref keys on the branch but builds the tag's version.
+
+    main's pyproject.toml carries the version auto-tag-release turns into the
+    tag, so such a run would publish the same version as the tag-keyed run
+    while sitting in a different concurrency group. It must not get that far.
+    """
+    assert _concurrency_key("workflow_dispatch", ref_name="main", inputs_ref="") != (
+        _concurrency_key("push", ref_name="v0.1.0.dev5")
+    )
+    for target in ("main", "", "refs/tags/v0.1.0.dev5", "0.1.0.dev5"):
+        assert not _guard_admits(target), f"guard admitted {target!r}"
+
+
+def test_the_guard_admits_exactly_the_targets_the_key_serializes() -> None:
+    for target in ("v0.1.0.dev5", "v0.1.0.dev6", "v1.0.0"):
+        assert _guard_admits(target), f"guard rejected {target!r}"
 
 
 def test_different_versions_do_not_block_each_other() -> None:
