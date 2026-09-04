@@ -13,6 +13,7 @@ import hashlib
 import io
 import json
 import os
+import subprocess
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -24,8 +25,17 @@ import yaml
 WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "release.yml"
 
 
+def _workflow() -> dict[str, Any]:
+    return yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+
+
 def _jobs() -> dict[str, Any]:
-    return yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]
+    return _workflow()["jobs"]
+
+
+def _on() -> dict[str, Any]:
+    # PyYAML resolves the bare `on:` key to the boolean True.
+    return _workflow()[True]
 
 
 def _needs(job: dict[str, Any]) -> set[str]:
@@ -387,6 +397,258 @@ def _exec_publish_check(
 # --------------------------------------------------------------------------
 # Shape guards for the parts that are wiring rather than logic.
 # --------------------------------------------------------------------------
+
+
+CONCURRENCY_EXPRESSION = "${{ github.event.inputs.ref || github.ref_name }}"
+
+
+def _concurrency_key(event: str, ref_name: str, inputs_ref: str | None = None) -> str:
+    """Render the workflow's concurrency group for one concrete event context.
+
+    Pins the shipped expression, then evaluates it. GitHub's `a || b` yields b
+    when a is null or the empty string, and `github.event.inputs` exists only on
+    a workflow_dispatch, so on a push the input side is always absent.
+    """
+    group = _workflow()["concurrency"]["group"]
+    prefix, marker, rest = group.partition("${{")
+    assert marker, f"concurrency group {group!r} interpolates nothing"
+    assert f"{marker}{rest}" == CONCURRENCY_EXPRESSION, f"unexpected expression in {group!r}"
+    supplied = (inputs_ref or "") if event == "workflow_dispatch" else ""
+    return prefix + (supplied or ref_name)
+
+
+def test_the_dispatch_ref_input_is_the_optional_string_this_key_assumes() -> None:
+    """The key is only correct if `ref` really is an optional, defaulted string."""
+    ref_input = _on()["workflow_dispatch"]["inputs"]["ref"]
+    assert ref_input["required"] is False
+    assert ref_input["default"] == ""
+    # No `type:` means string; a boolean or choice input would render differently.
+    assert "type" not in ref_input
+
+
+def test_same_version_serializes_across_tag_push_and_dispatch() -> None:
+    """The race: two runs for one version must never publish concurrently."""
+    from_push = _concurrency_key("push", ref_name="v0.1.0.dev5")
+    from_dispatch = _concurrency_key(
+        "workflow_dispatch", ref_name="main", inputs_ref="v0.1.0.dev5"
+    )
+    assert from_push == from_dispatch == "groupoid-release-v0.1.0.dev5"
+
+
+def _release_target_guard() -> dict[str, Any]:
+    return next(s for s in _jobs()["build"]["steps"] if "not a v<version> tag" in s.get("run", ""))
+
+
+def _guard_admits(target: str) -> bool:
+    """Evaluate the build guard's shell `case` for one effective target."""
+    body = _release_target_guard()["run"]
+    assert "v[0-9]*)" in body, f"guard does not match on a version tag: {body}"
+    completed = subprocess.run(
+        ["bash", "-c", body],
+        env={**os.environ, "RELEASE_TARGET": target},
+        capture_output=True,
+        text=True,
+    )
+    return completed.returncode == 0
+
+
+def test_the_guard_runs_before_anything_is_checked_out_or_built() -> None:
+    """The key is only trustworthy if non-tag targets die before publication."""
+    steps = _jobs()["build"]["steps"]
+    assert steps[0]["name"] == _release_target_guard()["name"]
+    assert str(steps[1].get("uses", "")).startswith("actions/checkout@")
+    assert _release_target_guard()["env"]["RELEASE_TARGET"] == (
+        "${{ github.event.inputs.ref || github.ref_name }}"
+    )
+
+
+def test_a_blank_or_branch_dispatch_ref_cannot_reach_publication() -> None:
+    """The residual race: a blank ref keys on the branch but builds the tag's version.
+
+    main's pyproject.toml carries the version auto-tag-release turns into the
+    tag, so such a run would publish the same version as the tag-keyed run
+    while sitting in a different concurrency group. It must not get that far.
+    """
+    assert _concurrency_key("workflow_dispatch", ref_name="main", inputs_ref="") != (
+        _concurrency_key("push", ref_name="v0.1.0.dev5")
+    )
+    for target in ("main", "", "refs/tags/v0.1.0.dev5", "0.1.0.dev5"):
+        assert not _guard_admits(target), f"guard admitted {target!r}"
+
+
+def _version_guard() -> dict[str, Any]:
+    return next(
+        s
+        for s in _jobs()["build"]["steps"]
+        if "does not name the version this commit publishes" in s.get("run", "")
+    )
+
+
+def _version_guard_admits(target: str, pyproject_version: str, tmp_path: Path) -> bool:
+    """Execute the correspondence guard against a real pyproject.toml."""
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "pyproject.toml").write_text(
+        f'[project]\nversion = "{pyproject_version}"\n', encoding="utf-8"
+    )
+    completed = subprocess.run(
+        ["bash", "-c", _version_guard()["run"]],
+        cwd=tmp_path,
+        env={**os.environ, "RELEASE_TARGET": target},
+        capture_output=True,
+        text=True,
+    )
+    return completed.returncode == 0
+
+
+def test_the_tag_must_name_the_version_the_commit_publishes(tmp_path: Path) -> None:
+    """Shape alone is not enough: an alias tag would key a different group.
+
+    v0.1.0.dev5-retry matches v[0-9]* and could point at the same commit, so
+    without this the same version could be published from two groups.
+    """
+    assert _version_guard_admits("v0.1.0.dev5", "0.1.0.dev5", tmp_path / "ok")
+    for alias in ("v0.1.0.dev5-retry", "v0.1.0.dev5.1", "v0.1.0.dev6", "v0.1.0"):
+        assert not _version_guard_admits(
+            alias, "0.1.0.dev5", tmp_path / alias.replace("/", "_")
+        ), f"guard admitted alias {alias!r}"
+
+
+def test_only_a_canonical_version_spelling_is_admitted(tmp_path: Path) -> None:
+    """PEP 440 equivalents collapse to one PyPI version but two tags.
+
+    setuptools normalizes the version into the artifact filenames, so
+    1.0.0-rc1 and 1.0.0rc1 publish the same version while yielding different
+    tags and different concurrency groups. Only the canonical spelling is
+    admitted, so each release has exactly one identity.
+    """
+    assert _version_guard_admits("v1.0.0rc1", "1.0.0rc1", tmp_path / "canonical")
+    assert _version_guard_admits("v0.1.0.dev5", "0.1.0.dev5", tmp_path / "dev")
+    for spelling in (
+        "1.0.0-rc1",
+        "1.0.0.rc1",
+        "1.0.0RC1",
+        "1.0.0rc1+local",
+        "1.0.0dev5",
+        "01.0.0",
+        "1.0.0rc01",
+        "0.1.0.dev05",
+    ):
+        safe = spelling.replace("+", "_").replace(".", "_")
+        assert not _version_guard_admits(
+            f"v{spelling}", spelling, tmp_path / safe
+        ), f"guard admitted non-canonical {spelling!r}"
+
+
+def test_the_guard_admits_exactly_the_self_normalizing_versions(tmp_path: Path) -> None:
+    """The property that closes the equivalence-collapse class for good.
+
+    Two spellings that PEP 440 normalizes to one version would publish one
+    PyPI version from two concurrency groups. The guard must therefore admit a
+    version if and only if it is already its own normalization, which this
+    checks against packaging rather than against a hand-written list.
+    """
+    from packaging.version import Version
+
+    candidates = [
+        "1.0.0",
+        "0.1.0.dev5",
+        "1.0.0rc1",
+        "2.11.3b7",
+        "1.0.0a0",
+        "0.0.0",
+        "10.20.30",
+        "01.0.0",
+        "1.01.0",
+        "1.0.00",
+        "1.0.0rc01",
+        "0.1.0.dev05",
+        "1.0.0-rc1",
+        "1.0.0.rc1",
+        "1.0.0RC1",
+        "1.0.0rc1+local",
+        "1.0.0dev5",
+        "1.0",
+        "1.0.0.post1",
+    ]
+    for index, spelling in enumerate(candidates):
+        admitted = _version_guard_admits(f"v{spelling}", spelling, tmp_path / str(index))
+        try:
+            canonical = str(Version(spelling)) == spelling
+        except Exception:  # noqa: BLE001 - not a PEP 440 version at all
+            canonical = False
+        # "1.0" and "1.0.0.post1" are self-normalizing but outside the release
+        # grammar this project uses; the guard may only be stricter, never
+        # looser, than self-normalization.
+        if admitted:
+            assert canonical, f"admitted {spelling!r}, which normalizes to {Version(spelling)}"
+
+
+def test_the_correspondence_guard_runs_after_checkout_and_before_the_build(
+    tmp_path: Path,
+) -> None:
+    names = [s.get("name") or str(s.get("uses", "")) for s in _jobs()["build"]["steps"]]
+    checkout = next(i for i, n in enumerate(names) if n.startswith("actions/checkout@"))
+    guard = names.index(_version_guard()["name"])
+    build = names.index("Build sdist + wheel")
+    assert checkout < guard < build
+    assert _version_guard()["env"]["RELEASE_TARGET"] == (
+        "${{ github.event.inputs.ref || github.ref_name }}"
+    )
+
+
+def test_the_guard_admits_exactly_the_targets_the_key_serializes() -> None:
+    for target in ("v0.1.0.dev5", "v0.1.0.dev6", "v1.0.0"):
+        assert _guard_admits(target), f"guard rejected {target!r}"
+
+
+def test_different_versions_do_not_block_each_other() -> None:
+    keys = {
+        _concurrency_key("push", ref_name="v0.1.0.dev5"),
+        _concurrency_key("push", ref_name="v0.1.0.dev6"),
+        _concurrency_key("workflow_dispatch", ref_name="main", inputs_ref="v0.1.0.dev6"),
+    }
+    assert len(keys) == 2, keys
+
+
+def test_the_group_is_namespaced_to_this_workflow() -> None:
+    group = _workflow()["concurrency"]["group"]
+    assert group.startswith("groupoid-release-")
+
+
+def test_a_waiting_run_never_cancels_one_that_may_be_publishing() -> None:
+    assert _workflow()["concurrency"]["cancel-in-progress"] is False
+
+
+def test_the_lock_is_workflow_level_not_job_level() -> None:
+    """Job-level locks would leave reconciliation outside the critical section."""
+    workflow = _workflow()
+    assert "concurrency" in workflow
+    for name, job in workflow["jobs"].items():
+        assert "concurrency" not in job, f"job {name} narrows the lock"
+
+
+def test_the_four_reconciliation_states_are_unchanged(tmp_path: Path) -> None:
+    """Serializing runs must not alter what a single run decides."""
+    extra = "groupoid-9.9.9-py3-none-manylinux1_x86_64.whl"
+    cases = {
+        "ABSENT": (_FakePyPI({}), 0, dict(REBUILD), "false"),
+        "COMPLETE": (_FakePyPI(dict(ORIGINAL)), 0, dict(ORIGINAL), "true"),
+        "PARTIAL": (_FakePyPI({WHEEL: ORIGINAL[WHEEL]}), 1, dict(REBUILD), None),
+        "CONFLICT": (
+            _FakePyPI({**ORIGINAL, extra: b"never built here"}),
+            1,
+            dict(REBUILD),
+            None,
+        ),
+    }
+    for index, (state, (pypi, want_code, want_dist, want_adopted)) in enumerate(cases.items()):
+        case_dir = tmp_path / str(index)
+        case_dir.mkdir()
+        code, out, dist, outputs = _exec_reconcile(case_dir, dict(REBUILD), pypi)
+        assert code == want_code, f"{state}: exit {code}"
+        assert state in out, f"{state} not reported: {out}"
+        assert dist == want_dist, f"{state}: wrong dist/"
+        assert outputs.get("adopted") == want_adopted, f"{state}: adopted={outputs.get('adopted')}"
 
 
 ADOPTED_CLAUSE = "needs.build.outputs.adopted != 'true'"
