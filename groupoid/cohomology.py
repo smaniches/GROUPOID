@@ -94,6 +94,10 @@ def cycle_basis_holonomy_defect(
     numpy.linalg.LinAlgError
         If a reverse-oriented edge must be traversed but its registered matrix
         is singular.
+    ValueError
+        If a cycle holonomy is not finite (NaN or infinite entries).  Such a
+        value would otherwise be silently dropped by ``max`` and reported as
+        flat transport.
     """
     undirected = graph.to_undirected()
     for u, v in undirected.edges():
@@ -142,6 +146,11 @@ def cycle_basis_holonomy_defect(
 
         dim = holonomy.shape[0]
         deviation = float(np.linalg.norm(holonomy - np.eye(dim), ord="fro"))
+        if not np.isfinite(deviation):
+            raise ValueError(
+                f"Non-finite holonomy on cycle {cycle}: the Frobenius defect is "
+                f"{deviation!r}. Transport maps must have finite entries."
+            )
         max_holonomy_defect = max(max_holonomy_defect, deviation)
 
     logger.debug("Cycle-basis holonomy defect = {:.6e}", max_holonomy_defect)

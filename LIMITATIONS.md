@@ -69,12 +69,18 @@ system. The following limitations apply.
   transport-error metric.
 - Sheaf Laplacian construction assumes uniform stalk dimension.
 - Parallel transport approximations (Schild's ladder, pole ladder)
-  are discrete approximations. The pole ladder matches geomstats'
-  analytic tangent-vector parallel transport closely in direction (cosine >
-  0.999 on a 60-degree S^2 hop) but does not converge to zero error as rungs
-  increase; it plateaus at a small residual (~0.02 here) and drifts slightly
-  off the endpoint tangent plane. Schild's ladder is markedly coarser (cosine
-  ~0.98 on the same hop).
+  are discrete approximations. On S^2 (a symmetric space, where the pole
+  ladder is exact) `pole_ladder` matches geomstats' analytic tangent-vector
+  parallel transport to round-off (error < 1e-12 on a 60-degree hop) for
+  every `n_rungs >= 1`; exactness on non-symmetric manifolds is not claimed
+  or tested. `schild_ladder` is the first-order geodesic-parallelogram
+  scheme: on the same hop with a unit tangent vector off the hop plane its
+  error against the analytic transport is 0.277 at one rung and halves with
+  every doubling of `n_rungs` (0.0040 at 64 rungs, measured ratio 2.00). It
+  reaches the endpoint tangent plane to round-off and preserves the vector
+  norm to 1e-6, but it is never exact where the pole ladder is; prefer the
+  pole ladder on symmetric spaces and raise `n_rungs` when Schild's ladder
+  is required.
 - Persistent homology Betti numbers are degenerate under the default
   filtration. `compute_persistence` counts only bars that die at
   infinity, so under the default `thresh=inf` (used by
@@ -89,7 +95,7 @@ system. The following limitations apply.
 ## Dependency constraints
 
 - Requires `numpy < 2.0` due to geomstats compatibility.
-- Requires `scipy < 1.14` for the same reason.
+- Requires `scipy < 1.16` for the same reason.
 - The `ripser` and `persim` packages may have build issues on
   some platforms (C++ compilation required).
 - `torch`, `pymanopt`, `POT`, and `einops` are declared as required

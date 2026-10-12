@@ -273,7 +273,17 @@ class TransportGroupoidAggregator:
         client_params: dict[str, npt.NDArray[np.float64]],
         weights: dict[str, float] | None = None,
     ) -> FederatedRound:
-        """Run one point-valued aggregation round under the explicit transport contract."""
+        """Run one point-valued aggregation round under the explicit transport contract.
+
+        Raises
+        ------
+        InvalidPointTransportError
+            If any client parameter array (or the resulting Karcher mean) is not
+            a point on the configured manifold.
+        ValueError
+            If ``weights`` contains negative or non-finite values or sums to
+            zero.
+        """
         self._round_idx += 1
         logger.info("Starting aggregation round {}", self._round_idx)
 
@@ -325,8 +335,16 @@ class TransportGroupoidAggregator:
             self._prev_divergence = divergence
 
         if weights is not None:
-            normalized_weights = np.array([weights.get(node, 1.0) for node in nodes])
-            normalized_weights = normalized_weights / normalized_weights.sum()
+            normalized_weights = np.array([weights.get(node, 1.0) for node in nodes], dtype=float)
+            if not np.all(np.isfinite(normalized_weights)) or np.any(normalized_weights < 0.0):
+                raise ValueError(
+                    "Client weights must be finite and non-negative; got "
+                    f"{dict(zip(nodes, normalized_weights.tolist(), strict=True))}."
+                )
+            total_weight = float(normalized_weights.sum())
+            if total_weight <= 0.0:
+                raise ValueError("Client weights must have a strictly positive sum.")
+            normalized_weights = normalized_weights / total_weight
         else:
             normalized_weights = None
 

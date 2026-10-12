@@ -8,7 +8,7 @@ version = "0.1.0.dev5"
 description = "Research prototype: groupoid-based aggregation for federated learning on Riemannian manifolds"
 readme = "README.md"
 license = "Apache-2.0"
-# Upper bound is real: the numpy<2.0 / scipy<1.14 pins below (required for
+# Upper bound is real: the numpy<2.0 / scipy<1.16 pins below (required for
 # geomstats compatibility) have no wheels for Python 3.13+, so 3.13 would
 # attempt a doomed source build. Capping here makes pip refuse cleanly with a
 # Requires-Python message instead. Supported: 3.10-3.12.
@@ -133,8 +133,9 @@ source = ["groupoid"]
 [tool.coverage.report]
 # Honest gate: the committed test suite achieves 100% line + branch coverage
 # on the supported interpreters (3.10-3.12). The only excluded lines are two
-# provably-unreachable defensive guards in aggregation.py, each marked with
-# `# pragma: no cover` and a one-line justification. Coverage is necessary but
+# provably-unreachable defensive guards in aggregation.py and a TYPE_CHECKING-
+# only import in manifold.py, each marked with `# pragma: no cover` and a
+# one-line justification. Coverage is necessary but
 # not sufficient for validation; per-module validation status is documented
 # honestly in STATUS.md (some modules remain smoke-tested despite full
 # coverage).

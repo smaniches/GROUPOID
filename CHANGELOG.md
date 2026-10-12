@@ -8,6 +8,50 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- **`pole_ladder` step schedule.** Each rung advanced by `log(end, base) / n_rungs`
+  taken once in the *initial* tangent space, so for `n_rungs > 1` the ladder
+  walked a geodesic that did not end at `end_point` and the result drifted off
+  the endpoint tangent plane (error grew from 2.1e-2 to 4.2e-2 between 1 and 8
+  rungs). The step is now `log(end, current_base) / (n_rungs - k)`, re-expressed
+  at every rung. On S^2 the pole ladder now matches geomstats' analytic parallel
+  transport to round-off (< 2e-15) for every rung count; `n_rungs=1` output is
+  unchanged. Pinned by `tests/test_audit_regressions.py`.
+- **`schild_ladder` was not Schild's ladder.** Its body was the pole-ladder
+  reflection with the same broken step schedule, which is why it appeared not to
+  converge. It now implements the geodesic-parallelogram construction (Kheyfets,
+  Miller & Newton 2000) with the tangent vector rescaled by `1 / n_rungs`, the
+  standard device that makes the first-order scheme converge (Guigui & Pennec
+  2021). Measured on the S^2 test hop: error halves with every doubling of rungs
+  (0.277 at 1 rung → 0.0040 at 64), endpoint tangency to round-off, norm
+  preserved to 1e-6. Outputs change for every call with `n_rungs > 1`; for
+  `n_rungs = 1` the result is identical whenever the vector lies in the plane of
+  the hop geodesic. `pole_ladder` remains the recommended method. `n_rungs < 1`
+  now raises `ValueError`.
+- `compute_tangent_transport_matrix` raises `ValueError` for an unknown `method`
+  instead of silently falling back to Schild's ladder.
+- `cycle_basis_holonomy_defect` raises `ValueError` when a registered transport
+  map contains NaN or infinity instead of propagating a non-finite defect.
+- `TransportGroupoidAggregator.aggregate` validates caller-supplied weights
+  (non-finite, negative, or zero-sum weights raise `ValueError`).
+- `compute_persistence` silences only ripser's spurious "input matrix is
+  square" `UserWarning` (emitted when `n_points == n_features` for a point
+  cloud that is not a distance matrix); previously the warning leaked to every
+  caller with a square point cloud. No other warning is suppressed.
+
+### Changed
+
+- `pyproject.toml` comment corrected to the actual `scipy<1.16` pin (it said
+  `<1.14`); the coverage-exclusion comment now also names the `TYPE_CHECKING`
+  import in `manifold.py`. `LIMITATIONS.md`, `PROBLEMS.md`, `STATUS.md`, and the README
+  now record the measured ladder behaviour above instead of the plateau
+  narrative that described the bug. `PROBLEMS.md` gains item 9.
+- `tests/test_transport_validation.py` tightens the pole-ladder tangency bound
+  from 0.03 to 1e-12 and compares the ladders on a generic off-plane vector
+  (for a vector in the hop plane both ladders are exact on S^2 by symmetry).
+
+
 ## [0.1.0.dev5]
 
 Scientific correction release. See `CORRECTION_NOTICE.md` for the evidence and

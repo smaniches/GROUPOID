@@ -51,8 +51,10 @@ integration tests:
 - **Parallel transport**: Schild's ladder and pole ladder
   (`groupoid.transport`) are tangent-vector transport utilities. Pole ladder
   is validated against geomstats' analytic tangent-vector parallel transport
-  on S^2 -- it matches in direction (cosine > 0.999) and magnitude. Schild's
-  ladder is a coarser first-order approximation and is asserted as such. The
+  on S^2 -- it matches to round-off for every rung count (S^2 is a symmetric
+  space, where the pole ladder is exact). Schild's ladder is the first-order
+  geodesic-parallelogram scheme: its error halves each time `n_rungs`
+  doubles, and the tests pin that convergence order. The
   former `register_transport_from_points` point-valued integration is
   withdrawn because tangent parallel transport does not by itself define the
   invertible point action required by the aggregator. The ambient tangent
@@ -133,7 +135,7 @@ hypothesis remains **unvalidated on real federated learning tasks** (see
 ## Installation
 
 Requires **Python 3.10, 3.11, or 3.12**. Python 3.13+ is not supported: the
-`numpy<2.0` / `scipy<1.14` pins (needed for geomstats compatibility, see
+`numpy<2.0` / `scipy<1.16` pins (needed for geomstats compatibility, see
 [LIMITATIONS.md](LIMITATIONS.md)) have no wheels there, so `pip` will refuse
 with a `Requires-Python` message rather than attempt a source build.
 

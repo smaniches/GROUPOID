@@ -93,16 +93,40 @@ test that fails on the pre-fix code.
    preregistered benchmark is unaffected because it registers explicit SO(3)
    rotations directly.
 
+9. **`schild_ladder` was not Schild's ladder, and its step schedule never
+   reached the endpoint (corrected in this release).** The function body was
+   the pole-ladder midpoint reflection, so the two "different" ladders were the
+   same algorithm, and it advanced `direction / n_rungs` while re-reading
+   `direction` from the current base every rung, so for `n_rungs > 1` it
+   stopped short of `end_point` and returned a vector that was not tangent
+   there. The recorded "does not converge as rungs increase" behaviour was this
+   bug, not a property of Schild's ladder. The function now implements the
+   geodesic parallelogram of Kheyfets, Miller and Newton (2000), with the
+   tangent vector rescaled by `1 / n_rungs` so the first-order scheme actually
+   converges (Guigui and Pennec, 2021). Measured on the S^2 test hop: error
+   halves with every doubling of rungs from 1 to 64 (ratio 2.00), endpoint
+   tangency to round-off, norm preserved to 1e-6. `pole_ladder` is exact on the
+   same hop and remains the recommended method; the accuracy ordering asserted
+   by the tests is unchanged. The corrected `pole_ladder` step schedule from the
+   same audit (`log(end, current_base) / (n_rungs - k)`) is applied here too.
+   The preregistered benchmark is unaffected because it registers explicit
+   SO(3) rotations directly and never calls either ladder.
+
 ## Known mathematical limitations (not bugs — documented honestly)
 
 From `LIMITATIONS.md`; recorded here so absence of a guarantee is never mistaken
 for an oversight:
 
-- **Pole ladder does not converge to zero error.** It matches geomstats' analytic
-  tangent-vector parallel transport closely in direction (cosine > 0.999 on a
-  60-degree S^2 hop) but plateaus at a small residual (~0.02 here) and drifts
-  slightly off the endpoint tangent plane as rungs increase. Schild's ladder is
-  markedly coarser (cosine ~0.98 on the same hop).
+- **Pole ladder exactness is established only on S^2.** With the per-rung
+  step schedule (each rung re-expresses the remaining geodesic in the current
+  tangent space) `pole_ladder` matches geomstats' analytic tangent-vector
+  parallel transport to round-off on a 60-degree S^2 hop for every rung count;
+  the earlier "plateau at ~0.02 / drifts off the tangent plane" behaviour was a
+  step-schedule bug, not an inherent limitation. S^2 is a symmetric space, where
+  the pole ladder is known to be exact; no accuracy claim is made for
+  non-symmetric manifolds. Schild's ladder is a first-order scheme: its error
+  halves with every doubling of `n_rungs` (0.277 -> 0.0040 from 1 to 64 rungs
+  on a unit off-plane vector) but it is not exact where the pole ladder is.
 - **Persistent-homology Betti numbers are degenerate under the default filtration.**
   `compute_persistence` counts only bars dying at infinity, so under the default
   `thresh=inf` (used by `track_divergence`) the Vietoris-Rips complex is fully
