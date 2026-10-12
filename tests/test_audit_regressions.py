@@ -226,12 +226,8 @@ class TestAggregateWeightValidation:
 
     def test_extreme_finite_weights_normalise_without_overflow(self):
         agg, params = _make_aggregator()
-        expected = agg.aggregate(
-            params, weights={"A": 1.0, "B": 1.0, "C": 0.0}
-        ).global_params
-        actual = agg.aggregate(
-            params, weights={"A": 1e308, "B": 1e308, "C": 0.0}
-        ).global_params
+        expected = agg.aggregate(params, weights={"A": 1.0, "B": 1.0, "C": 0.0}).global_params
+        actual = agg.aggregate(params, weights={"A": 1e308, "B": 1e308, "C": 0.0}).global_params
         np.testing.assert_allclose(actual, expected, atol=1e-10, rtol=1e-10)
 
     def test_valid_weights_still_normalise_and_aggregate(self):
