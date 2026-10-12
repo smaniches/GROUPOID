@@ -10,7 +10,7 @@ of the transported vector, not just its magnitude.
 Empirical finding (recorded so the asserted tolerances are honest, not
 reverse-engineered):
 
-- ``pole_ladder`` matches the analytic transport to round-off on a 60 degree
+- ``pole_ladder`` matches the analytic transport to round-off on a 30 degree
   geodesic hop for every rung count (S^2 is a symmetric space, where the pole
   ladder is exact). The cosine-similarity check below is kept as the
   direction-level contract; ``tests/test_audit_regressions.py`` pins the
@@ -18,7 +18,7 @@ reverse-engineered):
 - ``schild_ladder`` is the geodesic-parallelogram scheme of Kheyfets, Miller
   and Newton. It is first order: on the same hop with a unit tangent vector
   the error against the analytic transport halves with every doubling of
-  ``n_rungs`` (0.277 at 1 rung, 0.0040 at 64 rungs; measured ratio 2.00).
+  ``n_rungs`` (0.214 at 1 rung, 0.00327 at 64 rungs; measured ratio ~2.00).
   ``tests/test_audit_regressions.py`` pins that convergence order; here it
   is asserted to be in the right half-space, norm-preserving, and strictly
   less accurate than the pole ladder, consistent with its documented status

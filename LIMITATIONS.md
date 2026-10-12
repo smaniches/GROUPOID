@@ -74,9 +74,9 @@ system. The following limitations apply.
   parallel transport to round-off (error < 1e-12 on a 60-degree hop) for
   every `n_rungs >= 1`; exactness on non-symmetric manifolds is not claimed
   or tested. `schild_ladder` is the first-order geodesic-parallelogram
-  scheme: on the same hop with a unit tangent vector off the hop plane its
-  error against the analytic transport is 0.277 at one rung and halves with
-  every doubling of `n_rungs` (0.0040 at 64 rungs, measured ratio 2.00). It
+  scheme: on the 30-degree test hop with a unit tangent vector off the hop
+  plane its error against analytic transport is about 0.214 at one rung and
+  decreases to about 0.00327 at 64 rungs (observed first-order rate). It
   reaches the endpoint tangent plane to round-off and preserves the vector
   norm to 1e-6, but it is never exact where the pole ladder is; prefer the
   pole ladder on symmetric spaces and raise `n_rungs` when Schild's ladder

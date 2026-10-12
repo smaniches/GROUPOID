@@ -80,6 +80,8 @@ def pole_ladder(
     validation case the result matches analytic Levi-Civita parallel transport
     in direction and magnitude to round-off for every ``n_rungs >= 1``.
     """
+    if n_rungs < 1:
+        raise ValueError(f"n_rungs must be >= 1, got {n_rungs}")
     metric = manifold.metric
 
     current_base = base_point

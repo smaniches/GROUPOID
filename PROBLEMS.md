@@ -125,8 +125,8 @@ for an oversight:
   step-schedule bug, not an inherent limitation. S^2 is a symmetric space, where
   the pole ladder is known to be exact; no accuracy claim is made for
   non-symmetric manifolds. Schild's ladder is a first-order scheme: its error
-  halves with every doubling of `n_rungs` (0.277 -> 0.0040 from 1 to 64 rungs
-  on a unit off-plane vector) but it is not exact where the pole ladder is.
+  halves with every doubling of `n_rungs` (about 0.214 -> 0.00327 from 1 to 64 rungs
+  on a 30-degree test hop with a unit off-plane vector) but it is not exact where the pole ladder is.
 - **Persistent-homology Betti numbers are degenerate under the default filtration.**
   `compute_persistence` counts only bars dying at infinity, so under the default
   `thresh=inf` (used by `track_divergence`) the Vietoris-Rips complex is fully

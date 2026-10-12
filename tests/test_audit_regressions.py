@@ -110,9 +110,11 @@ class TestSchildLadderIsFirstOrder:
         manifold, base, end, v, gt = self._hop()
         errors = [
             float(np.linalg.norm(schild_ladder(manifold, v, base, end, n_rungs=n) - gt))
-            for n in (1, 2, 4, 8, 16, 32)
+            for n in (1, 2, 4, 8, 16, 32, 64)
         ]
-        assert errors[0] > 1e-3  # the scheme is genuinely approximate at 1 rung
+        # Closed-form S^2 reference for the 30-degree test hop.
+        assert errors[0] == pytest.approx(0.21406374, rel=1e-2)
+        assert errors[-1] == pytest.approx(0.00326856, rel=1e-2)
         for coarse, fine in zip(errors[:-1], errors[1:], strict=True):
             assert coarse / fine == pytest.approx(2.0, abs=0.15)
 
@@ -136,6 +138,12 @@ class TestSchildLadderIsFirstOrder:
 
 
 class TestTransportMethodValidation:
+    @pytest.mark.parametrize("n_rungs", [0, -1])
+    def test_pole_ladder_rejects_non_positive_rungs(self, n_rungs):
+        manifold, base, end, v, _ = _s2_setup()
+        with pytest.raises(ValueError, match="n_rungs"):
+            pole_ladder(manifold, v, base, end, n_rungs=n_rungs)
+
     def test_unknown_method_raises_instead_of_silently_using_schild(self):
         manifold, base, end, _, _ = _s2_setup()
         with pytest.raises(ValueError, match="Unknown transport method 'polar'"):
@@ -203,6 +211,28 @@ class TestAggregateWeightValidation:
         agg, params = _make_aggregator()
         with pytest.raises(ValueError, match="finite and non-negative"):
             agg.aggregate(params, weights={"A": 1.0, "B": bad})
+
+    def test_invalid_weights_do_not_consume_round_or_divergence_state(self):
+        agg, params = _make_aggregator()
+        agg.track_divergence = True
+        first = agg.aggregate(params)
+        saved_divergence = agg._prev_divergence
+        assert first.round_idx == 1
+        with pytest.raises(ValueError, match="finite and non-negative"):
+            agg.aggregate(params, weights={"B": -1.0})
+        assert agg._round_idx == 1
+        assert agg._prev_divergence is saved_divergence
+        assert agg.aggregate(params).round_idx == 2
+
+    def test_extreme_finite_weights_normalise_without_overflow(self):
+        agg, params = _make_aggregator()
+        expected = agg.aggregate(
+            params, weights={"A": 1.0, "B": 1.0, "C": 0.0}
+        ).global_params
+        actual = agg.aggregate(
+            params, weights={"A": 1e308, "B": 1e308, "C": 0.0}
+        ).global_params
+        np.testing.assert_allclose(actual, expected, atol=1e-10, rtol=1e-10)
 
     def test_valid_weights_still_normalise_and_aggregate(self):
         """Missing clients default to weight 1.0; a zero weight on one client

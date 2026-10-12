@@ -284,6 +284,24 @@ class TransportGroupoidAggregator:
             If ``weights`` contains negative or non-finite values or sums to
             zero.
         """
+        # Validate before any round/divergence state mutation. Scaling by the
+        # largest weight avoids overflow when positive finite weights sum to inf.
+        nodes = sorted(client_params)
+        if weights is not None:
+            raw_weights = np.array([weights.get(node, 1.0) for node in nodes], dtype=float)
+            if not np.all(np.isfinite(raw_weights)) or np.any(raw_weights < 0.0):
+                raise ValueError(
+                    "Client weights must be finite and non-negative; got "
+                    f"{dict(zip(nodes, raw_weights.tolist(), strict=True))}."
+                )
+            max_weight = float(np.max(raw_weights, initial=0.0))
+            if max_weight <= 0.0:
+                raise ValueError("Client weights must have a strictly positive sum.")
+            scaled_weights = raw_weights / max_weight
+            normalized_weights = scaled_weights / float(scaled_weights.sum())
+        else:
+            normalized_weights = None
+
         self._round_idx += 1
         logger.info("Starting aggregation round {}", self._round_idx)
 
@@ -333,20 +351,6 @@ class TransportGroupoidAggregator:
                 param_stack, previous_summary=self._prev_divergence
             )
             self._prev_divergence = divergence
-
-        if weights is not None:
-            normalized_weights = np.array([weights.get(node, 1.0) for node in nodes], dtype=float)
-            if not np.all(np.isfinite(normalized_weights)) or np.any(normalized_weights < 0.0):
-                raise ValueError(
-                    "Client weights must be finite and non-negative; got "
-                    f"{dict(zip(nodes, normalized_weights.tolist(), strict=True))}."
-                )
-            total_weight = float(normalized_weights.sum())
-            if total_weight <= 0.0:
-                raise ValueError("Client weights must have a strictly positive sum.")
-            normalized_weights = normalized_weights / total_weight
-        else:
-            normalized_weights = None
 
         global_params = karcher_mean(self.manifold, param_stack, weights=normalized_weights)
         self._require_manifold_point(global_params, context="Karcher mean output")
