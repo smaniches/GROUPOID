@@ -13,6 +13,8 @@
 > [STATUS.md](STATUS.md), [LIMITATIONS.md](LIMITATIONS.md), and
 > [CORRECTION_NOTICE.md](CORRECTION_NOTICE.md).
 
+**Research authorship:** Santiago Maniches (ORCID [0009-0005-6480-1987](https://orcid.org/0009-0005-6480-1987)) is the sole scientific author and independent maintainer of this research prototype. AI-assisted development and internal review are acknowledged as tooling, not independent scientific validation. Responsibility for its design, implementation decisions, interpretation, and published claims remains his.
+
 ## Overview
 
 GROUPOID explores using transport groupoids, cellular sheaves, and
