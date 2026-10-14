@@ -13,6 +13,7 @@ and Wasserstein distances.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 
 import numpy as np
@@ -97,7 +98,14 @@ def compute_persistence(
 
     logger.debug("Computing persistence: {} points, max_dim={}", points.shape[0], max_dim)
 
-    result = ripser(points, maxdim=max_dim, thresh=max_edge_length)
+    # ``points`` is a point cloud by contract (``distance_matrix=False`` is
+    # ripser's default).  When n_points == n_features ripser emits a spurious
+    # "input matrix is square" UserWarning; silence only that message.
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", message="The input matrix is square", category=UserWarning
+        )
+        result = ripser(points, maxdim=max_dim, thresh=max_edge_length)
     diagrams = result["dgms"]
 
     # Compute Betti numbers (count features that persist at infinity)

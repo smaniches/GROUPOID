@@ -13,8 +13,8 @@
   transport maps).
 - The parallel-transport module is validated against ground truth at the
   tangent-vector level: the pole ladder matches geomstats' analytic parallel
-  transport in direction (cosine > 0.999) and magnitude on S^2; Schild's
-  ladder is a coarser approximation. The former
+  transport to round-off on S^2; Schild's ladder is the first-order
+  geodesic-parallelogram scheme (error halves per rung doubling). The former
   `register_transport_from_points` point-valued integration is withdrawn:
   tangent parallel transport does not by itself define the invertible point
   action required by the aggregation pipeline.
@@ -62,7 +62,7 @@
 | Sheaf restriction maps | Tested | Hypothesis: functoriality verified (500 examples) |
 | Sheaf Laplacian | Tested | Unit: delta^T-delta equality, PSD, kernel content on non-orthogonal maps; Integration: spectral analysis, diffusion convergence |
 | Aggregation pipeline | Tested on supported point actions | Integration with explicit SO(3)/identity point actions on S^2; forward/return actions remain on the manifold; explicitly registered opposite arrows must be reciprocal. Arbitrary square matrices are not claimed as generic geometric transports |
-| Parallel transport | Tangent-vector transport tested; point-valued integration withdrawn | Unit: pole ladder matches geomstats analytic tangent transport in direction (cosine > 0.999) and magnitude on S^2; Schild's ladder is coarser. The ambient matrix helper supports only vector-shaped points and is not a generic point action. `register_transport_from_points` fails closed |
+| Parallel transport | Tangent-vector transport tested; point-valued integration withdrawn | Unit: pole ladder matches geomstats analytic tangent transport to round-off on S^2 for every rung count; Schild's ladder converges at first order (error ratio 2.00 per rung doubling, pinned by test). The ambient matrix helper supports only vector-shaped points and is not a generic point action. `register_transport_from_points` fails closed |
 | Riemannian optimizers | Tested (not integrated) | Unit: SGD, momentum SGD, and Adam descend to a known target on S^2 (final geodesic distance < 1e-6 / 1e-3 from a 60-degree start); moment accumulators parallel-transported between iterates with exact norm preservation where projection would annihilate them (both fallback branches covered); curvature-adaptive LR damps in positive curvature and falls back without curvature. No general convergence-rate analysis |
 | Persistent homology | Tested, integrated | Unit: circle's dominant 1-cycle via max persistence; two-cluster component count (betti_0 = 2) at a finite filtration; translation-invariant bottleneck distance. Dimension-aware: diagram retains an H0/H1 label, `track_divergence` compares H0-vs-H0 only, verified against an independent MST reconstruction of the H0 diagram and shown to not leak an H1-only change into the H0 divergence. Integration: opt-in `track_divergence` flag on the aggregator (zero bottleneck on identical rounds, positive on a client jump). Betti degeneracy at thresh=inf documented in LIMITATIONS.md |
 | Differential privacy | Not implemented | Listed as dependency only |
