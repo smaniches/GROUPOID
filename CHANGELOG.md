@@ -8,6 +8,29 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.1.0.dev6]
+
+Pre-alpha development release distributing the transport and validation fixes
+merged after 0.1.0.dev5 (#68). The research maturity is unchanged (pre-alpha);
+this is a prerelease. The preregistration and stored benchmark results are not
+modified: the benchmark uses explicit transport maps, not the ladders, and a
+rerun of all 600 runs under this candidate reproduced the stored per-run values
+exactly.
+
+**Who is affected.** In 0.1.0.dev5 and earlier, `pole_ladder` with
+`n_rungs > 1`, every `schild_ladder` call, and `compute_tangent_transport_matrix`
+(default `method="pole"`, `n_rungs=2`) can return incorrect tangent-vector
+transport. On the tested S^2 hops the released dev5 two-rung result deviated
+from closed-form Levi-Civita transport by up to 0.26 for vectors of norm 0.5.
+Single-rung pole-ladder output is unchanged. A corrected one-rung Schild result
+is not promised to be closer to the analytic answer than the previous
+(accidentally exact, pole-ladder) single-rung output; the correction is to the
+construction, and its error decreases as O(1 / n_rungs).
+
+**Behavior changes.** Unknown transport `method`, `n_rungs < 1`, negative,
+non-finite or zero-sum aggregation weights, and NaN/Inf registered holonomy maps
+now raise `ValueError` instead of returning a value.
+
 ### Fixed
 
 - **`pole_ladder` step schedule.** Each rung advanced by `log(end, base) / n_rungs`
@@ -245,7 +268,8 @@ Date shown is the tag commit (`v0.1.0.dev0` -> 2a02954). `CITATION.cff` records
 `date-released: 2026-05-25`, when the core implementation landed; the tag was
 later placed on the metadata commit.
 
-[Unreleased]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev5...HEAD
+[Unreleased]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev6...HEAD
+[0.1.0.dev6]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev5...v0.1.0.dev6
 [0.1.0.dev5]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev4...v0.1.0.dev5
 [0.1.0.dev4]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev2...v0.1.0.dev4
 [0.1.0.dev3]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev2...af42cb4
