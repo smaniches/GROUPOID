@@ -208,4 +208,5 @@ jobs:
             dist/*.tar.gz
             dist/*.whl
             sbom.cdx.json
-            *.sigstore.json
+            dist/groupoid-0.1.0.dev6.tar.gz.sigstore.json
+            dist/groupoid-0.1.0.dev6-py3-none-any.whl.sigstore.json
