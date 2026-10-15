@@ -501,8 +501,14 @@ jobs:
           import hashlib, json, pathlib, sys, time, urllib.error, urllib.request
 
           dist = pathlib.Path("dist")
+          # PEP 740 .publish.attestation sidecars may be written to dist/ by
+          # the PyPI publishing action. They are attestations attached to the
+          # distributions, not separate package files in PyPI JSON urls.
+          # Compare every actual wheel/sdist byte without treating sidecars
+          # as missing distributions.
           local = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
-                   for p in sorted(dist.iterdir()) if p.is_file()}
+                   for p in sorted(dist.iterdir())
+                   if p.is_file() and p.name.endswith((".whl", ".tar.gz"))}
           wheel = next(n for n in local if n.endswith(".whl"))
           project, version = wheel.split("-")[0], wheel.split("-")[1]
           url = f"https://pypi.org/pypi/{project}/{version}/json"
