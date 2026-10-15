@@ -23,17 +23,23 @@ name: Auto Tag Release
 # missing, so a pre-existing manual tag always takes precedence and this
 # workflow becomes a no-op for that version.
 
+# Tag only a main commit whose CI run succeeded. The tag-exists check below
+# keeps this idempotent for CI runs on commits that did not bump the version.
 on:
-  push:
-    branches: [main]
-    paths:
-      - pyproject.toml
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
 
 permissions:
   contents: read
 
 jobs:
   tag:
+    if: >-
+      ${{ github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_branch == 'main' &&
+          github.event.workflow_run.head_repository.full_name == github.repository }}
     runs-on: ubuntu-latest
     permissions:
       contents: write   # push the tag
@@ -41,13 +47,25 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0   # need full tag history to check for an existing tag
 
       - name: Create the release tag if this version doesn't have one yet, and dispatch the release
         env:
           GH_TOKEN: ${{ github.token }}
+          CI_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
+
+          # Tag only the exact commit that passed CI, and only while it is
+          # still the head of main.
+          ci_sha="${CI_SHA}"
+          [ "$(git rev-parse HEAD)" = "${ci_sha}" ]
+          main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq .object.sha)"
+          if [ "${main_sha}" != "${ci_sha}" ]; then
+            echo "main advanced past ${ci_sha}; the newer head's CI run decides."
+            exit 0
+          fi
 
           version=$(grep -m1 '^version = "' pyproject.toml | sed -E 's/version = "(.*)"/\1/')
           if [ -z "${version}" ]; then
