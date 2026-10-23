@@ -31,10 +31,9 @@ jobs:
           p=Path('SECURITY.md'); text=p.read_text()
           text=text.replace('The\n  advisory concerns crafted-checkpoint / JIT deserialization (`torch.load` and\n  related paths), which GROUPOID\'s own code does not exercise.','The\n  upstream report concerns `torch.jit.script` memory corruption, not a general\n  claim about every `torch.load` call. GROUPOID does not call `torch.jit.script`.\n  This exception is not a statement that arbitrary PyTorch inputs are safe.')
           text+='\n## FileLock compatibility constraint (2026-10-23)\n\nThe fresh PyTorch environment resolved FileLock 3.32.3, affected by CVE-2026-112940. The package now requires 3.20.3, which predates the affected SQLite locking feature and supports Python 3.10. This is a dependency constraint, not an advisory suppression. Revisit when the supported PyTorch range permits patched FileLock >=4.2.1. Reachability of the vulnerable SQLite lock path from GROUPOID was not established. Existing scanner exceptions above are separate and are not blanket security approval.\n\nAdvisory: https://github.com/tox-dev/filelock/security/advisories/GHSA-v4x8-3wr5-3wq8\n'; p.write_text(text)
-          p=Path('.github/workflows/ci.yml'); text=p.read_text().replace('The torch.load / JIT\n        #   deserialization path is not exercised by GROUPOID.','The reported torch.jit.script\n        #   path is not called by GROUPOID.'); p.write_text(text)
           assert 'filelock==3.20.3' in tomllib.loads(Path('pyproject.toml').read_text())['project']['dependencies']
           PY
-          git add pyproject.toml groupoid/__init__.py CITATION.cff STATUS.md .zenodo.json codemeta.json CHANGELOG.md SECURITY.md .github/workflows/ci.yml
+          git add pyproject.toml groupoid/__init__.py CITATION.cff STATUS.md .zenodo.json codemeta.json CHANGELOG.md SECURITY.md
           git diff --cached --stat
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
