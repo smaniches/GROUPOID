@@ -8,6 +8,10 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.1.0.dev7]
+
+Security-only prerelease. Constrain the PyTorch FileLock dependency to 3.20.3, which predates the SQLite lock feature affected by CVE-2026-112940 and supports the existing Python 3.10-3.12 range. Revisit when PyTorch supports patched FileLock >=4.2.1. No aggregation, transport, diagnostic, stored benchmark, or preregistration is changed.
+
 ## [0.1.0.dev6]
 
 Pre-alpha development release distributing the transport and validation fixes
@@ -268,7 +272,8 @@ Date shown is the tag commit (`v0.1.0.dev0` -> 2a02954). `CITATION.cff` records
 `date-released: 2026-05-25`, when the core implementation landed; the tag was
 later placed on the metadata commit.
 
-[Unreleased]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev6...HEAD
+[Unreleased]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev7...HEAD
+[0.1.0.dev7]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev6...v0.1.0.dev7
 [0.1.0.dev6]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev5...v0.1.0.dev6
 [0.1.0.dev5]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev4...v0.1.0.dev5
 [0.1.0.dev4]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev2...v0.1.0.dev4

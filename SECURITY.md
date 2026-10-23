@@ -29,8 +29,9 @@ releases.
   the listed v2.6.0 affected range) instead of clearing it. CI tracks the
   advisory via a documented `--ignore-vuln`; there is no fixed release to
   upgrade to, and the ignore is revisited when upstream publishes one. The
-  advisory concerns crafted-checkpoint / JIT deserialization (`torch.load` and
-  related paths), which GROUPOID's own code does not exercise.
+  upstream report concerns `torch.jit.script` memory corruption, not a general
+  claim about every `torch.load` call. GROUPOID does not call `torch.jit.script`.
+  This exception is not a statement that arbitrary PyTorch inputs are safe.
 - The CI-pinned `setuptools` (held to `>=78.1.1,<82` because `torch` requires
   `setuptools<82`) is flagged by `pip-audit` for advisory PYSEC-2026-3447
   (CVE-2026-59890): prior to setuptools 83.0.0, `MANIFEST.in` exclude,
@@ -41,3 +42,9 @@ releases.
   on a macOS filesystem — all GROUPOID CI and release builds run on
   `ubuntu-latest`. CI tracks the advisory via a documented `--ignore-vuln`;
   the ignore is revisited once torch allows `setuptools>=83`.
+
+## FileLock compatibility constraint (2026-10-23)
+
+The fresh PyTorch environment resolved FileLock 3.32.3, affected by CVE-2026-112940. The package now requires 3.20.3, which predates the affected SQLite locking feature and supports Python 3.10. This is a dependency constraint, not an advisory suppression. Revisit when the supported PyTorch range permits patched FileLock >=4.2.1. Reachability of the vulnerable SQLite lock path from GROUPOID was not established. Existing scanner exceptions above are separate and are not blanket security approval.
+
+Advisory: https://github.com/tox-dev/filelock/security/advisories/GHSA-v4x8-3wr5-3wq8
