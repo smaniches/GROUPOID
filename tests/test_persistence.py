@@ -135,12 +135,8 @@ class TestTrackDivergence:
         single_summary = track_divergence(singleton, max_dim=0)
 
         # Both orders use the same symmetric bottleneck metric.
-        going_to_empty = track_divergence(
-            singleton, previous_summary=pair_summary, max_dim=0
-        )
-        coming_from_empty = track_divergence(
-            pair, previous_summary=single_summary, max_dim=0
-        )
+        going_to_empty = track_divergence(singleton, previous_summary=pair_summary, max_dim=0)
+        coming_from_empty = track_divergence(pair, previous_summary=single_summary, max_dim=0)
         assert going_to_empty.bottleneck_to_previous == pytest.approx(2.0, abs=1e-6)
         assert coming_from_empty.bottleneck_to_previous == pytest.approx(2.0, abs=1e-6)
 
