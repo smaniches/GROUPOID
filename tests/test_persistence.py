@@ -149,7 +149,5 @@ class TestTrackDivergence:
         """Two singleton point clouds have no finite H0 bars at all."""
         singleton = np.array([[0.0, 0.0]])
         prior = track_divergence(singleton, max_dim=0)
-        current = track_divergence(
-            singleton + 100.0, previous_summary=prior, max_dim=0
-        )
+        current = track_divergence(singleton + 100.0, previous_summary=prior, max_dim=0)
         assert current.bottleneck_to_previous == 0.0

@@ -1,7 +1,8 @@
 """Persistent homology for federated model divergence detection.
 
 Applies topological data analysis to track how the distribution of
-client model parameters evolves across federated rounds. A stable persistence diagram is not a convergence certificate:
+client model parameters evolves across federated rounds. A stable
+persistence diagram is not a convergence certificate:
 pairwise-distance-preserving translations/rotations and some genuine
 model-configuration changes can have unchanged diagrams. The tool
 reports a dimension-specific geometric diagnostic, not convergence or
