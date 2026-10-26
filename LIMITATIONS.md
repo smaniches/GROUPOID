@@ -89,6 +89,15 @@ system. The following limitations apply.
   The informative loop signal lives in `max_persistence` / the finite
   bars; meaningful component counts require passing a finite
   `max_edge_length` between the intra- and inter-cluster scales.
+- The opt-in `track_divergence` metric measures only changes in the
+  **finite H0** persistence diagram. It is invariant under translations,
+  rotations, and other pairwise-distance-preserving changes, and ignores
+  changes confined to H1 or higher homology. Thus a zero bottleneck
+  does **not** demonstrate client-model convergence or predictive
+  stability. If one diagram has no finite H0 bars, its distance to a
+  nonempty diagram is half the longest unmatched interval's lifetime,
+  not zero. Validation against model optimization would require
+  independent parameter-space or task-loss evidence.
 - No formal convergence rate analysis exists for the groupoid
   aggregation method.
 

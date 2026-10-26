@@ -1,14 +1,16 @@
 """Persistent homology for federated model divergence detection.
 
 Applies topological data analysis to track how the distribution of
-client model parameters evolves across federated rounds. The key
-invariant: if the persistence diagram is stable across rounds, the
-federation is converging; if new topological features appear, clients
-are diverging into distinct clusters.
+client model parameters evolves across federated rounds. A stable persistence diagram is not a convergence certificate:
+pairwise-distance-preserving translations/rotations and some genuine
+model-configuration changes can have unchanged diagrams. The tool
+reports a dimension-specific geometric diagnostic, not convergence or
+model-performance evidence.
 
-Uses Vietoris-Rips filtration on the space of model parameters to
-compute persistence diagrams, then measures stability via bottleneck
-and Wasserstein distances.
+Uses Vietoris-Rips filtration on point clouds of model parameters
+and compares finite H0 diagrams across rounds with bottleneck distance.
+It does not calculate Wasserstein distance or test higher-dimensional
+changes in the inter-round comparison.
 """
 
 from __future__ import annotations
@@ -160,9 +162,9 @@ def track_divergence(
 ) -> PersistenceSummary:
     """Track federation divergence across rounds.
 
-    Computes persistence of current parameter distribution and, if a
-    previous summary exists, computes the bottleneck distance to
-    measure how much the topological structure has changed.
+    Computes persistence of a point cloud and, with a prior summary,
+    compares its finite H0 diagrams by bottleneck distance. A zero
+    value does not imply convergence of the underlying client models.
 
     Parameters
     ----------
@@ -198,6 +200,16 @@ def track_divergence(
             summary.bottleneck_to_previous = float(dist)
             logger.info("Bottleneck distance to previous round: {:.4f}", dist)
         else:
-            summary.bottleneck_to_previous = 0.0
+            # The bottleneck distance to the empty diagram is NOT zero:
+            # every unmatched finite interval must match the diagonal,
+            # costing half its lifetime in L-infinity. This applies in
+            # either direction. Only two empty diagrams have distance 0.
+            unmatched = current_h0 if len(current_h0) > 0 else prev_h0
+            if len(unmatched) > 0:
+                summary.bottleneck_to_previous = float(
+                    np.max(unmatched[:, 1] - unmatched[:, 0]) / 2.0
+                )
+            else:
+                summary.bottleneck_to_previous = 0.0
 
     return summary

@@ -25,9 +25,11 @@
   against H0 only; this is verified against an independent
   minimum-spanning-tree reconstruction of the H0 diagram (the finite H0
   death times equal the MST edge weights), and an H1-only change is shown
-  not to leak into the H0 divergence. It is wired into the aggregation
-  pipeline via the aggregator's opt-in `track_divergence` flag. See the
-  Betti-degeneracy caveat in LIMITATIONS.md.
+  not to leak into the H0 divergence. Degenerate one-empty-diagram
+  comparisons use the nonzero bottleneck-to-diagonal distance.
+  It is wired into the aggregator via the opt-in `track_divergence`
+  flag but cannot establish model convergence. See the Betti-degeneracy
+  caveat in LIMITATIONS.md.
 - The optimizer module is validated against known-correct references:
   Riemannian SGD (with and without momentum) and Adam descend to a known
   target on S^2 (geodesic-distance objective), and the momentum/first-

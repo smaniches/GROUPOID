@@ -74,8 +74,12 @@ integration tests:
   retains a homology-dimension label, and `track_divergence` compares H0
   against H0 only (it does not pool features across dimensions); this is
   verified against an independent minimum-spanning-tree reconstruction of
-  the H0 diagram. The Betti numbers are degenerate under the default
-  `thresh=inf` filtration; see [LIMITATIONS.md](LIMITATIONS.md).
+  the H0 diagram. A zero value is a geometric diagnostic, **not** a
+  certificate of client-model convergence: translations and H1-only
+  changes can leave it unchanged. A finite H0 diagram compared with
+  an empty one incurs the nonzero bottleneck-to-diagonal cost.
+  The Betti numbers are degenerate under the default `thresh=inf`
+  filtration; see [LIMITATIONS.md](LIMITATIONS.md).
 
 ## Implemented and validated, not yet integrated
 
