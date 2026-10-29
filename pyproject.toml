@@ -46,6 +46,11 @@ dependencies = [
     "numpy>=1.24,<2.0",
     "scipy>=1.10,<1.16",
     "torch>=2.0",
+    # PyTorch's current filelock<4 constraint excludes the patched 4.2.1+ line.
+    # 3.20.3 fixes earlier SoftFileLock issues and predates the 3.20.4+ SQLite
+    # ReadWriteLock advisories; freeze the safe intersection until PyTorch's
+    # published dependency contract permits a security-patched newer version.
+    "filelock==3.20.3",
     "pydantic>=2.0",
     "loguru>=0.7",
 ]
