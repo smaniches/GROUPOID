@@ -8,6 +8,39 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.1.0.dev7] - 2026-10-29
+
+Pre-alpha corrective release distributing the October 29 fixes already merged
+on `main` (#77, #78 and #81). No new experiments, measured federated-learning
+performance gains, or general convergence claims are introduced. Archived
+preregistration and historical benchmark outputs remain unchanged.
+
+### Fixed
+
+- **Finite H0 bottleneck versus an empty diagram (#77).** The previous
+  `track_divergence` fallback returned `0.0` when either finite H0 diagram
+  was empty. The mathematically correct cost is half the largest unmatched
+  persistence interval. For a two-point cloud separated by 4 versus a
+  singleton, the result is now **2.0** in either direction, not zero;
+  empty-versus-empty remains zero. Regression tests cover both directions.
+  The metric remains an H0-only geometric diagnostic, **not** a certificate
+  of federated model convergence or predictive stability.
+
+### Changed
+
+- **Removed an unused mandatory dependency (#81).** `torch` was declared as
+  required but is not imported by the implemented library. New installations
+  no longer require PyTorch or its dependency graph. The security CI installs
+  the actual supported runtime closure, requires patched `setuptools`, checks
+  `pip check`, and runs `pip-audit` without advisory ignores. The full
+  Python 3.10–3.12 tests, docs, and code-quality checks passed on `main`.
+  **Compatibility note:** PyTorch is no longer installed automatically;
+  callers requiring it for their own workflows must install it separately.
+  Upgrading an existing environment does not uninstall previously installed
+  PyTorch or other packages; independently audit those environments.
+- Updated SHA-pinned `actions/setup-python` and PyPI publishing action (#78).
+  No algorithmic behavior was changed by this CI maintenance.
+
 ## [0.1.0.dev6]
 
 Pre-alpha development release distributing the transport and validation fixes
@@ -268,7 +301,8 @@ Date shown is the tag commit (`v0.1.0.dev0` -> 2a02954). `CITATION.cff` records
 `date-released: 2026-05-25`, when the core implementation landed; the tag was
 later placed on the metadata commit.
 
-[Unreleased]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev6...HEAD
+[Unreleased]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev7...HEAD
+[0.1.0.dev7]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev6...v0.1.0.dev7
 [0.1.0.dev6]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev5...v0.1.0.dev6
 [0.1.0.dev5]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev4...v0.1.0.dev5
 [0.1.0.dev4]: https://github.com/smaniches/GROUPOID/compare/v0.1.0.dev2...v0.1.0.dev4
