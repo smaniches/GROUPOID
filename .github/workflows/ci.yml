@@ -72,12 +72,12 @@ jobs:
           .github/scripts/install_torch_cpu.sh
           pip install -e .
           pip install bandit pip-audit
-          # Pin setuptools LAST. torch requires setuptools<82 and pulls in a
-          # runner-bundled setuptools that can predate the PYSEC-2025-49 fix
-          # (78.1.1); upgrading before `pip install -e .` is simply undone by torch.
-          # The window >=78.1.1,<82 clears the advisory while staying
-          # dependency-consistent with torch (verified: pip check clean).
-          python -m pip install --upgrade "setuptools>=78.1.1,<82"
+          # Update build tooling LAST and audit the actual installed closure.
+          # The prior <82 ceiling was self-imposed: the observed torch 2.15.0+cpu
+          # wheel requires setuptools>=77.0.3, not setuptools<82.
+          # setuptools>=84.1.0 patches GHSA-xmj3-9gf7-h52w. Do not suppress
+          # the advisory; retain pip-audit as a hard gate.
+          python -m pip install --upgrade "setuptools>=84.1.0"
       - name: Run bandit
         run: bandit -r groupoid/ -c pyproject.toml
       - name: Audit dependencies for known vulnerabilities (pip-audit)
