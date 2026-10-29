@@ -23,7 +23,6 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          .github/scripts/install_torch_cpu.sh
           pip install -e ".[docs]"
       - name: Build docs
         run: mkdocs build --strict
