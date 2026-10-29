@@ -42,7 +42,6 @@ updates:
       # of one PR per package.
       runtime:
         patterns:
-          - "torch"
           - "geomstats"
           - "pymanopt"
           - "ripser"
