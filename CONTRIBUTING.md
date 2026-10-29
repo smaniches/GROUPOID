@@ -80,18 +80,20 @@ please open an issue using the "Mathematical Correction" template.
 1. Open a release-cut PR that bumps the version across every metadata
    file that carries it: `pyproject.toml`, `groupoid/__init__.py`,
    `codemeta.json`, `CITATION.cff` (version and `date-released`),
-   `STATUS.md` (both mentions), and `.zenodo.json` (version, the erratum
-   description, and `isNewVersionOf` advanced to the prior version's
-   Zenodo DOI). Roll `CHANGELOG.md`'s `Unreleased` section into a new
-   version heading with compare links. See PRs #40 or #48 for the
+   `STATUS.md` (version), and `.zenodo.json` (version, the correction
+   description, and its concept DOI `isVersionOf` relationship). Only include
+   `isNewVersionOf` when the immediately preceding record DOI has been
+   independently verified; never inherit a stale predecessor. Roll
+   `CHANGELOG.md`'s `Unreleased` section into a new version heading with
+   compare links. See PRs #40 or #48 for the
    template.
 2. Merge the PR to `main`.
 
 That's it — merging is the release trigger, split across two workflows
 with one job each:
 
-- `.github/workflows/auto-tag-release.yml` runs on every push to `main`
-  that touches `pyproject.toml`. It reads the version out of
+- `.github/workflows/auto-tag-release.yml` runs after successful CI for a
+  push to the **current** `main` commit. It reads the version out of
   `pyproject.toml`, and if no `v<version>` tag exists yet, it creates and
   pushes one (as `github-actions[bot]`) after checking the version has a
   recognized format and that `CHANGELOG.md` documents it. A push with no
