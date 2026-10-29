@@ -78,6 +78,8 @@ jobs:
           # setuptools>=84.1.0 patches GHSA-xmj3-9gf7-h52w. Do not suppress
           # the advisory; retain pip-audit as a hard gate.
           python -m pip install --upgrade "setuptools>=84.1.0"
+      - name: Verify installed dependency metadata
+        run: python -m pip check
       - name: Run bandit
         run: bandit -r groupoid/ -c pyproject.toml
       - name: Audit dependencies for known vulnerabilities (pip-audit)
