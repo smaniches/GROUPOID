@@ -11,7 +11,8 @@ against point clouds with known structure, not just line execution:
   scales -- this validates component counting.
 - ``track_divergence`` is exercised across all three of its branches: no
   previous summary, a previous summary with non-empty H0 diagrams (bottleneck
-  computed), and the degenerate empty-diagram fallback.
+  computed), and mathematically correct empty-to-nonempty and
+  empty-to-empty bottleneck distances.
 
 Caveat validated and documented: with the default ``thresh=inf`` filtration,
 ``betti_0``/``betti_1`` count only bars that die at infinity, so on a single
@@ -126,12 +127,23 @@ class TestTrackDivergence:
         assert shifted.bottleneck_to_previous == pytest.approx(0.0, abs=1e-6)
 
     @pytest.mark.filterwarnings("ignore:The input point cloud has more columns:UserWarning")
-    def test_empty_finite_diagram_falls_back_to_zero(self):
-        """When the current cloud has no finite H0 bars (a single point has
-        only the infinite component), the empty-diagram branch sets the
-        bottleneck distance to 0.0 rather than calling persim. (ripser emits a
-        benign columns>rows warning for the degenerate single-point input.)"""
-        prev = track_divergence(_two_clusters(seed=4))
-        single_point = np.array([[0.0, 0.0]])
-        result = track_divergence(single_point, previous_summary=prev)
-        assert result.bottleneck_to_previous == 0.0
+    def test_single_empty_diagram_has_nonzero_bottleneck(self):
+        """A finite H0 bar [0, 4] must match the diagonal at cost 2."""
+        pair = np.array([[0.0, 0.0], [4.0, 0.0]])
+        singleton = np.array([[0.0, 0.0]])
+        pair_summary = track_divergence(pair, max_dim=0)
+        single_summary = track_divergence(singleton, max_dim=0)
+
+        # Both orders use the same symmetric bottleneck metric.
+        going_to_empty = track_divergence(singleton, previous_summary=pair_summary, max_dim=0)
+        coming_from_empty = track_divergence(pair, previous_summary=single_summary, max_dim=0)
+        assert going_to_empty.bottleneck_to_previous == pytest.approx(2.0, abs=1e-6)
+        assert coming_from_empty.bottleneck_to_previous == pytest.approx(2.0, abs=1e-6)
+
+    @pytest.mark.filterwarnings("ignore:The input point cloud has more columns:UserWarning")
+    def test_two_empty_finite_h0_diagrams_have_zero_bottleneck(self):
+        """Two singleton point clouds have no finite H0 bars at all."""
+        singleton = np.array([[0.0, 0.0]])
+        prior = track_divergence(singleton, max_dim=0)
+        current = track_divergence(singleton + 100.0, previous_summary=prior, max_dim=0)
+        assert current.bottleneck_to_previous == 0.0
