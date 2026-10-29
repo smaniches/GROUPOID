@@ -107,12 +107,14 @@ system. The following limitations apply.
 - Requires `scipy < 1.16` for the same reason.
 - The `ripser` and `persim` packages may have build issues on
   some platforms (C++ compilation required).
-- `torch`, `pymanopt`, `POT`, and `einops` are declared as required
-  runtime dependencies but are not imported by any current code path (the full
-  test suite passes with all four uninstalled). Installing `groupoid` therefore
-  pulls in packages, most notably `torch`, that the current code does not use.
-  The `torch` advisory tracked in SECURITY.md applies to the installed
-  dependency, not to any code path GROUPOID exercises.
+- The former required `torch` dependency was removed because the current
+  implementation and entire documented test suite do not import it. It had
+  constrained `filelock` and `setuptools` to vulnerable versions; no current
+  GROUPOID code requires PyTorch. Future PyTorch functionality requires
+  a new separately tested dependency contract.
+- `pymanopt`, `POT`, and `einops` are still declared as required runtime
+  dependencies but not imported in the current implementation. Their removal
+  is a separate compatibility change, not part of this security correction.
 
 ## Test coverage
 
