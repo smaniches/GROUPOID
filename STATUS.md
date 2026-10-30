@@ -79,7 +79,7 @@ behavior against a known-correct reference or analytic result.
 ## Test coverage
 
 The committed test suite reaches 100% line and branch coverage of the
-`groupoid` package on the supported interpreters (Python 3.10-3.12),
+`groupoid` package on the supported interpreters (Python 3.11-3.12),
 enforced in CI with `--cov-branch --cov-fail-under=100`. The only excluded
 lines are two provably-unreachable defensive guards in `aggregation.py` and
 a `TYPE_CHECKING`-only import in `manifold.py`, each marked with

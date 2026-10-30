@@ -119,7 +119,7 @@ system. The following limitations apply.
 ## Test coverage
 
 - Releases are gated on the repository's hard line and branch coverage checks
-  on Python 3.10-3.12. Coverage is not validation: the scientific correction
+  on Python 3.11-3.12. Coverage is not validation: the scientific correction
   adds explicit tests for basis dependence, general non-orthogonal gauge
   dependence of the defect magnitude, the tangent/point representation
   boundary, and the supported SO(3) point-action round trip.

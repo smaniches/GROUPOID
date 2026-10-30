@@ -2,7 +2,8 @@
 
 ## Installation
 
-Requires Python 3.10, 3.11, or 3.12.
+Requires Python 3.11 or 3.12. Python 3.10 reached end of life on
+2026-10-01 and is no longer supported.
 
 ### From PyPI
 

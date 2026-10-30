@@ -4,15 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "groupoid"
-version = "0.1.0.dev7"
+version = "0.1.0.dev8"
 description = "Research prototype: groupoid-based aggregation for federated learning on Riemannian manifolds"
 readme = "README.md"
 license = "Apache-2.0"
 # Upper bound is real: the numpy<2.0 / scipy<1.16 pins below (required for
 # geomstats compatibility) have no wheels for Python 3.13+, so 3.13 would
 # attempt a doomed source build. Capping here makes pip refuse cleanly with a
-# Requires-Python message instead. Supported: 3.10-3.12.
-requires-python = ">=3.10,<3.13"
+# Requires-Python message instead. Python 3.10 reached EOL on 2026-10-01;
+# the supported, CI-tested interpreter range is Python 3.11-3.12.
+requires-python = ">=3.11,<3.13"
 authors = [
     {name = "Santiago Maniches", email = "santiago.maniches@gmail.com"},
 ]
@@ -29,7 +30,6 @@ classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Mathematics",
@@ -97,6 +97,7 @@ Changelog = "https://github.com/smaniches/GROUPOID/blob/main/CHANGELOG.md"
 include = ["groupoid*"]
 
 [tool.ruff]
+# Keep lint syntax conservative; this is not a runtime-support declaration.
 target-version = "py310"
 line-length = 99
 
@@ -109,7 +110,7 @@ target-version = ["py310"]
 line-length = 99
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
@@ -131,7 +132,7 @@ source = ["groupoid"]
 
 [tool.coverage.report]
 # Honest gate: the committed test suite achieves 100% line + branch coverage
-# on the supported interpreters (3.10-3.12). The only excluded lines are two
+# on the supported interpreters (3.11-3.12). The only excluded lines are two
 # provably-unreachable defensive guards in aggregation.py and a TYPE_CHECKING-
 # only import in manifold.py, each marked with `# pragma: no cover` and a
 # one-line justification. Coverage is necessary but

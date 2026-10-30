@@ -3,7 +3,7 @@
 [![CI](https://github.com/smaniches/GROUPOID/actions/workflows/ci.yml/badge.svg)](https://github.com/smaniches/GROUPOID/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/groupoid.svg)](https://pypi.org/project/groupoid/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Python 3.10-3.12](https://img.shields.io/badge/python-3.10--3.12-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11-3.12](https://img.shields.io/badge/python-3.11--3.12-blue.svg)](https://www.python.org/downloads/)
 [![Status](https://img.shields.io/badge/status-pre--alpha-orange.svg)](#status)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20563974.svg)](https://doi.org/10.5281/zenodo.20563974)
 
@@ -140,7 +140,8 @@ hypothesis remains **unvalidated on real federated learning tasks** (see
 
 ## Installation
 
-Requires **Python 3.10, 3.11, or 3.12**. Python 3.13+ is not supported: the
+Requires **Python 3.11 or 3.12**. Python 3.10 reached end of life on
+October 1, 2026 and is no longer supported. Python 3.13+ is not supported: the
 `numpy<2.0` / `scipy<1.16` pins (needed for geomstats compatibility, see
 [LIMITATIONS.md](LIMITATIONS.md)) have no wheels there, so `pip` will refuse
 with a `Requires-Python` message rather than attempt a source build.
@@ -205,7 +206,7 @@ pytest tests/ -v
 ```
 
 The suite reaches 100% line and branch coverage of the `groupoid` package
-on Python 3.10-3.12, enforced in CI:
+on Python 3.11-3.12, enforced in CI:
 
 ```bash
 pytest tests/ --cov=groupoid --cov-branch --cov-fail-under=100
