@@ -34,6 +34,31 @@ jobs:
       - name: Run mypy (strict)
         run: mypy --strict groupoid/ --ignore-missing-imports
 
+  # Retain the protected-main historical check name while making its semantics
+  # a negative compatibility test. It proves that Python 3.10 is REJECTED;
+  # supported functional tests run only on Python 3.11 and 3.12 above.
+  unsupported-python310:
+    name: test (3.10)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.10"
+      - name: Verify unsupported interpreter is rejected by package metadata
+        run: |
+          set -euo pipefail
+          if python -m pip install --no-deps . > /tmp/unsupported-python.log 2>&1; then
+            cat /tmp/unsupported-python.log
+            echo "::error::Python 3.10 installation unexpectedly succeeded"
+            exit 1
+          fi
+          if ! grep -Eqi "requires a different Python|requires-python|requires Python" /tmp/unsupported-python.log; then
+            cat /tmp/unsupported-python.log
+            echo "::error::Installation failed for an unexpected reason"
+            exit 1
+          fi
+
   test:
     runs-on: ubuntu-latest
     strategy:
