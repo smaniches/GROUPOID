@@ -1,6 +1,6 @@
 """GROUPOID: Groupoid-based federated learning with Riemannian geometry."""
 
-__version__ = "0.1.0.dev7"
+__version__ = "0.1.0.dev8"
 
 from groupoid.aggregation import (
     DisconnectedClientGraphError,

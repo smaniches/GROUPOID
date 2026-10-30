@@ -43,7 +43,7 @@ norm; see the correction notice for the exact construct and assumptions.
 ## Test coverage
 
 The committed suite reaches 100% line and branch coverage of the
-`groupoid` package on Python 3.10-3.12, enforced in CI
+`groupoid` package on Python 3.11-3.12, enforced in CI
 (`--cov-branch --cov-fail-under=100`). Coverage measures which lines run,
 not whether behavior is correct; the tables above record the validation
 depth per module, which coverage alone does not capture.

@@ -10,7 +10,7 @@ tests/test_sheaf_laplacian.py (the general, non-degenerate case):
   3. For orthogonal transport R_uv = g_v g_u^{-1}, transport-consistent global
      sections lie in ker(L), constant sections do not, and dim(ker L) == stalk.
 
-Run (from the repo root, in a Python 3.10-3.12 env with the package installed):
+Run (from the repo root, in a Python 3.11-3.12 env with the package installed):
 
     python scripts/reproduce_sheaf_laplacian.py
 

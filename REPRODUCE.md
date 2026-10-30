@@ -8,7 +8,8 @@ repeated runs, and matches the invariants asserted in
 
 ## Environment
 
-- **Python 3.10, 3.11, or 3.12** (not 3.13+; the `numpy<2.0` / `scipy<1.16`
+- **Python 3.11 or 3.12** (Python 3.10 reached upstream EOL on
+  2026-10-01; not 3.13+ because the `numpy<2.0` / `scipy<1.16`
   pins required by geomstats have no wheels there -- see
   [LIMITATIONS.md](LIMITATIONS.md)).
 - Pins used to produce the receipt below: `numpy 1.26.4`, `scipy 1.13.1`,

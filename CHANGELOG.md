@@ -8,6 +8,20 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.1.0.dev8] - 2026-10-30
+
+### Changed
+
+- **Retired end-of-life Python 3.10 support.** Python 3.11 and 3.12 are the
+  supported and tested interpreter versions; `Requires-Python`, package
+  classifiers, installation instructions, test matrix, and citation metadata
+  now agree. Python 3.10 reached upstream end of life on October 1, 2026.
+  Existing users of Python 3.10 should migrate to 3.11 or 3.12 before
+  upgrading this package. Python 3.13+ remains excluded for the separately
+  documented numerical dependency constraints.
+- This release contains no algorithm or scientific-method changes; historical
+  experimental artifacts and scientific qualification statements are unchanged.
+
 ## [0.1.0.dev7] - 2026-10-29
 
 Pre-alpha corrective release distributing the October 29 fixes already merged
