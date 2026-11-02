@@ -122,7 +122,8 @@ def main() -> None:
 
     flat = results["flat"]
     corrupted = results["corrupted"]
-    assert isinstance(flat, dict) and isinstance(corrupted, dict)
+    if not isinstance(flat, dict) or not isinstance(corrupted, dict):
+        raise TypeError("Aggregation cases must be dictionaries")
     print("GROUPOID | deterministic S2 transport-aggregation demonstration")
     print("Analytic oracle: north pole (symmetric latent points)")
     print(f"Untransported Karcher error (radians): {results['untransported_error_rad']:.6f}")
