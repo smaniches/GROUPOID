@@ -1,10 +1,11 @@
 # Examples
 
-Illustrative scripts. These are **not** benchmarks and produce **no real
-results**.
+Illustrative scripts. The aggregation example executes numerical calculations
+on constructed inputs; the curve example generates fabricated placeholders.
+Neither is a real-world federated-learning benchmark.
 
 
-## `transport_aggregation_demo.py` (EXECUTED AGGREGATION)
+## `transport_aggregation_demo.py` (NUMERICAL AGGREGATION)
 
 Unlike the synthetic curve generator above, this example invokes GROUPOID's
 actual Karcher mean, SO(3) point-action aggregation, and cycle-holonomy
