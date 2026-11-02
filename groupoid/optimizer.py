@@ -10,6 +10,10 @@ This module provides:
 - Riemannian Adam with exponential map updates
 - Adaptive learning rate based on sectional curvature
 
+For a non-Euclidean metric, callers must supply metric-dual Riemannian
+gradients: projecting a raw Euclidean coordinate gradient with `to_tangent`
+ensures tangency but does not convert its covector to a Riemannian gradient.
+
 Accumulated moments (the SGD momentum velocity and Adam's first moment)
 live in the tangent space of the iterate that produced them. After each
 step they are parallel-transported into the new iterate's tangent space
@@ -134,7 +138,7 @@ class RiemannianAdam:
 
     Adapts the Adam optimizer to Riemannian manifolds by maintaining
     exponential moving averages of the Riemannian gradient and its
-    squared norm, with updates via the exponential map. The first moment
+    metric-defined squared norm, with updates via the exponential map. The first moment
     is parallel-transported into each new iterate's tangent space (see
     the module docstring); the second moment is a scalar gradient-norm
     average and needs no transport because parallel transport is an
@@ -173,7 +177,9 @@ class RiemannianAdam:
         point
             Current point on the manifold.
         euclidean_grad
-            Euclidean gradient.
+            Historical parameter name for the supplied gradient. On
+            non-Euclidean manifolds this must already be the metric-dual
+            Riemannian gradient; tangent projection alone is insufficient.
 
         Returns
         -------
@@ -184,7 +190,10 @@ class RiemannianAdam:
 
         # Riemannian gradient
         grad = self.manifold.to_tangent(euclidean_grad, point)
-        grad_norm_sq = float(np.sum(grad**2))
+        # The second moment lives in the manifold's metric, not ambient
+        # Euclidean coordinates. This distinction matters on SPD, weighted
+        # and other non-Euclidean parameter spaces.
+        grad_norm_sq = float(np.asarray(self.manifold.metric.squared_norm(grad, point)).item())
 
         # Update biased first moment (tangent vector). Seed from zero like the
         # second moment below: m_1 = (1 - beta1) * grad, so the bias correction

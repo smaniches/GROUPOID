@@ -139,3 +139,67 @@ class TestDescent:
         opt = RiemannianAdam(manifold=self.manifold, lr=0.05)
         initial, final = self._run(opt, n_steps=400)
         assert final < 1e-3 < initial
+
+
+class _ConstantMetric:
+    """Positive-definite constant metric on a flat coordinate space."""
+
+    def __init__(self, matrix: np.ndarray):
+        self.matrix = matrix
+
+    def squared_norm(self, tangent: np.ndarray, base_point: np.ndarray) -> float:
+        # Require the base point to be forwarded rather than silently
+        # computing an unweighted ambient norm.
+        assert base_point.shape == tangent.shape
+        return float(tangent @ self.matrix @ tangent)
+
+    @staticmethod
+    def exp(tangent: np.ndarray, base_point: np.ndarray) -> np.ndarray:
+        return base_point + tangent
+
+
+class _MetricFlatManifold:
+    def __init__(self, matrix: np.ndarray):
+        self.metric = _ConstantMetric(matrix)
+
+    @staticmethod
+    def to_tangent(tangent: np.ndarray, _point: np.ndarray) -> np.ndarray:
+        return tangent
+
+
+class TestMetricAwareAdam:
+    def test_first_step_uses_metric_squared_norm(self):
+        """The first Adam step has an exact known weighted-metric normalization."""
+        g = np.diag([9.0, 1.0])
+        point = np.array([0.4, -0.2])
+        gradient = np.array([1.0, 1.0])
+        opt = RiemannianAdam(manifold=_MetricFlatManifold(g), lr=0.1, eps=0.0)
+
+        updated = opt.step(point, gradient)
+        expected = point - 0.1 * gradient / np.sqrt(gradient @ g @ gradient)
+        np.testing.assert_allclose(updated, expected, rtol=0.0, atol=1e-14)
+        assert opt._v == pytest.approx((1.0 - opt.beta2) * 10.0)
+
+        # Incorrect ambient Euclidean normalization gives a different step.
+        ambient = point - 0.1 * gradient / np.linalg.norm(gradient)
+        assert np.linalg.norm(updated - ambient) > 0.05
+
+    def test_first_step_respects_linear_coordinate_change(self):
+        """Changing coordinates and transforming the metric must commute."""
+        g = np.diag([9.0, 1.0])
+        change = np.diag([3.0, 1.0])
+        inverse = np.linalg.inv(change)
+        transformed_metric = inverse.T @ g @ inverse
+        point = np.array([0.2, -0.1])
+        tangent_gradient = np.array([1.0, 1.0])
+
+        original_optimizer = RiemannianAdam(manifold=_MetricFlatManifold(g), lr=0.1, eps=0.0)
+        transformed_optimizer = RiemannianAdam(
+            manifold=_MetricFlatManifold(transformed_metric),
+            lr=0.1,
+            eps=0.0,
+        )
+        original = original_optimizer.step(point, tangent_gradient)
+        transformed = transformed_optimizer.step(change @ point, change @ tangent_gradient)
+
+        np.testing.assert_allclose(transformed, change @ original, rtol=0.0, atol=1e-14)
