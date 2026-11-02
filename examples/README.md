@@ -1,7 +1,33 @@
 # Examples
 
-Illustrative scripts. These are **not** benchmarks and produce **no real
-results**.
+Illustrative scripts. The aggregation example executes numerical calculations
+on constructed inputs; the curve example generates fabricated placeholders.
+Neither is a real-world federated-learning benchmark.
+
+
+## `transport_aggregation_demo.py` (NUMERICAL AGGREGATION)
+
+Unlike the synthetic curve generator above, this example invokes GROUPOID's
+actual Karcher mean, SO(3) point-action aggregation, and cycle-holonomy
+diagnostic on five deterministic spherical client points.
+
+```bash
+python -m examples.transport_aggregation_demo
+python -m examples.transport_aggregation_demo --json
+```
+
+The latent points are arranged symmetrically around the north pole, which
+provides an independent analytic intrinsic-mean target. They are then expressed
+in five known, different coordinate frames. The example reports geodesic error
+for an untransported Karcher mean, and for transport aggregation under either
+a flat connection or a deliberately corrupted rotation on the closing cycle.
+It also checks whether the algorithm's returned local points agree with the
+declared frame maps. The JSON form is intended for reproducible machine reads.
+
+This demonstrates the existing implementation on a controlled analytic case,
+not real federated model training, a wall-clock benchmark, or external
+scientific validation. The frame maps are given, not estimated. The corrupted
+case remains a legitimate SO(3) point action but is not cycle-flat.
 
 ## `synthetic_curve_demo.py` (SYNTHETIC -- NO TRAINING)
 
