@@ -193,11 +193,13 @@ class TestMetricAwareAdam:
         point = np.array([0.2, -0.1])
         tangent_gradient = np.array([1.0, 1.0])
 
-        original = RiemannianAdam(
-            manifold=_MetricFlatManifold(g), lr=0.1, eps=0.0
-        ).step(point, tangent_gradient)
-        transformed = RiemannianAdam(
-            manifold=_MetricFlatManifold(transformed_metric), lr=0.1, eps=0.0
-        ).step(change @ point, change @ tangent_gradient)
+        original_optimizer = RiemannianAdam(manifold=_MetricFlatManifold(g), lr=0.1, eps=0.0)
+        transformed_optimizer = RiemannianAdam(
+            manifold=_MetricFlatManifold(transformed_metric),
+            lr=0.1,
+            eps=0.0,
+        )
+        original = original_optimizer.step(point, tangent_gradient)
+        transformed = transformed_optimizer.step(change @ point, change @ tangent_gradient)
 
         np.testing.assert_allclose(transformed, change @ original, rtol=0.0, atol=1e-14)
