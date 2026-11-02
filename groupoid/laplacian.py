@@ -163,10 +163,15 @@ def sheaf_diffusion_step(
 ) -> dict[str, npt.NDArray[np.float64]]:
     """One step of sheaf diffusion (Laplacian smoothing).
 
-    Drives local sections toward global consistency by flowing along
-    the negative gradient of the sheaf Laplacian energy:
+    Integrates dx/dt = -L_F x by explicit Euler, equivalently gradient
+    descent on half the non-negative sheaf disagreement energy:
 
         E(x) = x^T L_F x = sum_{(i,j)} ||R_{ij} x_i - x_j||^2
+
+    For symmetric positive-semidefinite L_F, the energy cannot increase
+    when 0 <= step_size < 2 / lambda_max(L_F). Rather than compute an
+    eigendecomposition on each step, the function enforces the sufficient
+    (conservative) bound step_size * ||L_F||_infinity < 2.
 
     Parameters
     ----------
@@ -177,14 +182,30 @@ def sheaf_diffusion_step(
     stalk_dim
         Dimension of each stalk.
     step_size
-        Diffusion step size (must be < 1/lambda_max for stability).
+        Finite, non-negative Euler step. A positive step violating the
+        conservative spectral bound is rejected rather than silently
+        amplifying the disagreement energy. Zero is a valid no-op step.
 
     Returns
     -------
     dict[str, npt.NDArray[np.float64]]
         Updated section values after one diffusion step.
     """
+    if not np.isfinite(step_size) or step_size < 0.0:
+        raise ValueError("step_size must be finite and non-negative")
+
     L = build_sheaf_laplacian(sheaf, stalk_dim)
+    # Symmetry and PSD give lambda_max(L) <= ||L||_infinity.
+    # The row-sum norm costs O((n*d)^2), not an O((n*d)^3) eigensolve.
+    bound = float(np.linalg.norm(L, ord=np.inf))
+    if not np.isfinite(bound):
+        raise ValueError("sheaf Laplacian must have a finite norm bound")
+    if bound > 0.0 and step_size * bound >= 2.0:
+        raise ValueError(
+            "step_size violates the conservative sheaf diffusion stability bound: "
+            f"require step_size * ||L||_inf < 2 (||L||_inf={bound:.6g})"
+        )
+
     nodes = sorted(sheaf.graph.nodes())
 
     # Stack sections into vector
