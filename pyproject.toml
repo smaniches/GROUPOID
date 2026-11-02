@@ -8,11 +8,10 @@ version = "0.1.0.dev8"
 description = "Research prototype: groupoid-based aggregation for federated learning on Riemannian manifolds"
 readme = "README.md"
 license = "Apache-2.0"
-# Upper bound is real: the numpy<2.0 / scipy<1.16 pins below (required for
-# geomstats compatibility) have no wheels for Python 3.13+, so 3.13 would
-# attempt a doomed source build. Capping here makes pip refuse cleanly with a
-# Requires-Python message instead. Python 3.10 reached EOL on 2026-10-01;
-# the supported, CI-tested interpreter range is Python 3.11-3.12.
+# This package is tested and supported on Python 3.11-3.12. The current
+# numpy<2.0 constraint excludes Python 3.13+ binary NumPy releases; lifting
+# either restriction requires a separately tested dependency compatibility
+# matrix, including geomstats. Python 3.10 reached EOL on 2026-10-01.
 requires-python = ">=3.11,<3.13"
 authors = [
     {name = "Santiago Maniches", email = "santiago.maniches@gmail.com"},
@@ -44,7 +43,7 @@ dependencies = [
     "networkx>=3.0",
     "einops>=0.7",
     "numpy>=1.24,<2.0",
-    "scipy>=1.10,<1.16",
+    "scipy>=1.10,<1.18",
     "pydantic>=2.0",
     "loguru>=0.7",
 ]
