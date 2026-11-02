@@ -173,9 +173,7 @@ class TestMetricAwareAdam:
         g = np.diag([9.0, 1.0])
         point = np.array([0.4, -0.2])
         gradient = np.array([1.0, 1.0])
-        opt = RiemannianAdam(
-            manifold=_MetricFlatManifold(g), lr=0.1, eps=0.0
-        )
+        opt = RiemannianAdam(manifold=_MetricFlatManifold(g), lr=0.1, eps=0.0)
 
         updated = opt.step(point, gradient)
         expected = point - 0.1 * gradient / np.sqrt(gradient @ g @ gradient)
