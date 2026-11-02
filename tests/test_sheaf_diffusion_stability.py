@@ -33,9 +33,7 @@ def test_default_rejects_energy_amplification() -> None:
     # Prior implementation accepted eta=.1 and multiplied E by 82.81.
     previous = stacked - 0.1 * L @ stacked
     assert _energy(sheaf, x) == pytest.approx(100.0)
-    assert _energy(sheaf, {"A": previous[:1], "B": previous[1:]}) == pytest.approx(
-        8281.0
-    )
+    assert _energy(sheaf, {"A": previous[:1], "B": previous[1:]}) == pytest.approx(8281.0)
     with pytest.raises(ValueError, match="conservative sheaf diffusion stability"):
         sheaf_diffusion_step(sheaf, x, stalk_dim=1)
     np.testing.assert_array_equal(x["A"], [1.0])
