@@ -13,7 +13,6 @@ from geomstats.geometry.euclidean import Euclidean
 
 from groupoid.aggregation import TransportGroupoidAggregator
 
-
 INPUT = 2
 HIDDEN = 3
 OUTPUT = 2
@@ -65,9 +64,7 @@ def test_real_mlp_parameter_gauge_is_integrated_into_aggregation() -> None:
         )
 
     graph = nx.DiGraph([("A", "B"), ("A", "C"), ("B", "C")])
-    agg = TransportGroupoidAggregator(
-        manifold=Euclidean(dim=DIM), graph=graph, base_node="A"
-    )
+    agg = TransportGroupoidAggregator(manifold=Euclidean(dim=DIM), graph=graph, base_node="A")
     # P[node] sends canonical coordinates into each client's local frame.
     # The point action from client B/C back to the base is P[node]^{-1}.
     to_base = {node: np.eye(DIM)[:, indices] for node, indices in idx.items()}
