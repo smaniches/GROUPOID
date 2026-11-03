@@ -302,8 +302,8 @@ class TransportGroupoidAggregator:
         else:
             normalized_weights = None
 
-        self._round_idx += 1
-        logger.info("Starting aggregation round {}", self._round_idx)
+        next_round_idx = self._round_idx + 1
+        logger.info("Starting aggregation round {}", next_round_idx)
 
         for node, params in client_params.items():
             self._require_manifold_point(params, context=f"client {node} input")
@@ -350,7 +350,7 @@ class TransportGroupoidAggregator:
             divergence = _persistence.track_divergence(
                 param_stack, previous_summary=self._prev_divergence
             )
-            self._prev_divergence = divergence
+            # Do not commit divergence until the full round succeeds.
 
         global_params = karcher_mean(self.manifold, param_stack, weights=normalized_weights)
         self._require_manifold_point(global_params, context="Karcher mean output")
@@ -389,9 +389,14 @@ class TransportGroupoidAggregator:
             h1_norm=defect,
             is_consistent=passes_threshold,
             transport_residuals=orthogonality_residuals,
-            round_idx=self._round_idx,
+            round_idx=next_round_idx,
             divergence=divergence,
         )
+
+        # Commit round state only after every forward/return action succeeds.
+        self._round_idx = next_round_idx
+        if self.track_divergence:
+            self._prev_divergence = divergence
 
         logger.info(
             "Round {} complete: cycle-basis defect={:.2e}, passes_threshold={}",
