@@ -116,7 +116,11 @@ jobs:
       - name: Install pre-commit
         run: pip install pre-commit
       - name: Run pre-commit
-        run: pre-commit run --all-files
+        run: |
+          if ! pre-commit run --all-files; then
+            git diff -- tests/test_neural_gauge_bridge.py
+            exit 1
+          fi
 
   benchmark:
     runs-on: ubuntu-latest
