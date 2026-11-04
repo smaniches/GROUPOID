@@ -9,7 +9,7 @@
 
 > **Pre-alpha research prototype.** This is an early-stage exploration of
 > groupoid-based aggregation for federated learning on Riemannian manifolds.
-> It is not a production federated learning system. See
+> It is not a production federated learning system. The dev9 corrective prerelease distributes metric-aware numerical fixes and safer aggregation state updates; it does not establish real-world federated-learning improvements. See
 > [STATUS.md](STATUS.md), [LIMITATIONS.md](LIMITATIONS.md), and
 > [CORRECTION_NOTICE.md](CORRECTION_NOTICE.md).
 
