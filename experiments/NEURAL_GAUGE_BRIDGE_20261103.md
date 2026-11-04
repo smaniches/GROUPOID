@@ -29,9 +29,9 @@ Across the six runs, the transported and canonical parameter trajectories agreed
 
 ## Code and evidence custody
 
-Executable reference script: `groupoid_real_neural.py`, SHA-256 `4e852ddc63c0443079464cab853efc276e916e6412ca22436aef0eda73401492`. Six complete JSON traces are retained as separate user-controlled research artifacts. The source includes an optional `--verify-groupoid` integration gate, not executed in the original six CPU runs because `geomstats` was absent in that environment.
+Executable reference script: [`real_neural/groupoid_real_neural.py.txt`](real_neural/groupoid_real_neural.py.txt) (preserved original Python source; SHA-256 `4e852ddc63c0443079464cab853efc276e916e6412ca22436aef0eda73401492`). All six complete JSON traces are now committed under [`real_neural/archives/`](real_neural/archives/) at their original hashes. The optional `--verify-groupoid` package bridge was **not** run in the historical six CPU trials because `geomstats` was absent in that environment.
 
-| Local evidence file | SHA-256 |
+| Archived evidence file (under `real_neural/archives/`) | SHA-256 |
 |---|---|
 | `groupoid_run_seed1.json` | `20df0a3cdd442f76ba8277b687ee04ae78b41a57e44a3806d8660d663f48f1cc` |
 | `groupoid_seed_11.json` | `e9d73f63d6babdf1ef496530b108ac2e7e2969bea87ea4de605a3c63c1cf09ee` |

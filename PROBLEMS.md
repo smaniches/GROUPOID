@@ -145,7 +145,7 @@ for an oversight:
 
 From `STATUS.md`; stated plainly so the scope is unambiguous:
 
-- No federated training loop with real neural networks exists yet.
+- No complete real-neural federated training loop has been demonstrated through the package aggregation API. A separate six-seed handwritten-digits MLP experiment with simulated clients and known inverse permutations is archived in `experiments/real_neural/`.
 - No differential privacy mechanism is implemented (Opacus / TenSEAL are listed as
   optional dependencies for future work but are integrated into no code path).
 - No formal convergence analysis or proofs exist for the groupoid aggregation
