@@ -8,6 +8,40 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.1.0.dev9] - 2026-11-04
+
+Pre-alpha corrective prerelease distributing already-merged numerical and
+transactional fixes. The release is **not** evidence of a federated-learning
+performance improvement or a complete training system.
+
+### Fixed
+
+- **Riemannian Adam second moment (#84):** use the manifold metric's
+  squared gradient norm rather than ambient Euclidean `sum(grad**2)`.
+  This matters for non-Euclidean metrics; matching closed-form and
+  coordinate-equivariance checks are included. The caller must supply a
+  true Riemannian gradient, not an arbitrary ambient covector.
+- **Explicit-Euler sheaf diffusion stability (#85):** reject steps violating
+  a sufficient spectral-norm stability bound; a previous legal input
+  amplified disagreement energy. This conservative check may reject some
+  otherwise stable steps. It is not a general convergence theorem.
+- **Federated-round state integrity:** commit state only after a successful
+  aggregation rather than exposing partial state on failure. Transaction
+  regression tests are included.
+
+### Validation and scope
+
+- Includes a runnable five-client SO(3) aggregation illustration with an
+  analytic reference, recorded standalone six-seed hidden-unit permutation
+  experiments, and corresponding replay/invariant tests.
+- The illustration uses constructed data. The archived neural experiment
+  is not an end-to-end training experiment through the package's
+  aggregator, does not infer unknown alignment, and does not demonstrate
+  superiority to standard federated-learning systems.
+- No historical experimental result or previous immutable release is
+  modified. Python 3.11–3.12 and pre-alpha constraints remain unchanged.
+
+
 ## [0.1.0.dev8] - 2026-10-30
 
 ### Changed
