@@ -129,23 +129,20 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-      # Benchmarks run for information only. There is no regression gate:
-      # timing baselines recorded on one machine are not comparable to a
-      # different CI runner, so gating CI against such a baseline would be a
-      # meaningless pass/fail. The benchmark JSON is uploaded as an artifact
-      # for inspection. A real cross-run regression gate can be added later
-      # (e.g. github-action-benchmark with continuous baselines), at which
-      # point a committed, machine-tagged baseline becomes meaningful.
-      - name: Run benchmarks (informational only, not a gate)
+      # Benchmark test assertions are required to pass. Only measured timing
+      # distributions remain informational: a different CI runner is not a
+      # defensible performance-regression baseline. Upload the raw JSON for
+      # inspection without silently treating pytest failures as green CI.
+      - name: Run benchmark tests (correctness gated; timing informational)
         run: |
-          pytest benchmarks/ -v --benchmark-json=benchmark_results.json || true
+          pytest benchmarks/ -v --benchmark-json=benchmark_results.json
       - name: Upload benchmark results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: benchmark-results
           path: benchmark_results.json
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
   docs:
     runs-on: ubuntu-latest
