@@ -45,3 +45,14 @@ Repository integration test `tests/test_neural_gauge_bridge.py` directly exercis
 ## Next falsifier
 
 With supplied inverse maps removed, attempt blind matching under the same sample, training-token and communication budgets. Compare against canonical FedAvg and ordinary matching baselines. Score inferred-permutation correctness and held-out task accuracy separately. A failed matching experiment would show that exact transport is mathematically coherent but not yet an operational aggregation method.
+
+## Public source and trace archive (2026-11-03 addendum)
+
+The original CPU script and six JSON result traces described above are now
+preserved byte-for-byte under [`real_neural/`](real_neural/README.md). The
+original SHA-256 values above remain the source-of-truth custody identifiers.
+The archive includes a light, executable integrity gate and a per-round replay
+comparison tool. This publication does not change the frozen protocol or
+turn the reported equality under known permutations into evidence for
+unknown-gauge inference. The six historical runs did not invoke the optional
+project-API bridge; that interface has separate integration tests.

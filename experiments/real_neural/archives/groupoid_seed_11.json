@@ -1,0 +1,384 @@
+{
+  "contract": {
+    "alpha": 0.4,
+    "clients": 4,
+    "local_steps": 4,
+    "lr": 0.4,
+    "rounds": 18,
+    "seed": 11
+  },
+  "dataset": {
+    "client_label_distributions": [
+      [
+        8,
+        32,
+        0,
+        22,
+        14,
+        0,
+        99,
+        0,
+        0,
+        26
+      ],
+      [
+        7,
+        53,
+        9,
+        3,
+        76,
+        67,
+        4,
+        43,
+        69,
+        40
+      ],
+      [
+        0,
+        15,
+        51,
+        44,
+        13,
+        26,
+        15,
+        81,
+        1,
+        16
+      ],
+      [
+        109,
+        27,
+        64,
+        59,
+        24,
+        34,
+        9,
+        1,
+        52,
+        44
+      ]
+    ],
+    "examples": 1797,
+    "partition_counts": [
+      201,
+      371,
+      262,
+      423
+    ],
+    "raw_data_digest_sha256": "20def7f70a702f0af9732fbba4375e147a7d54fe70d8c45569b8e7c1c7010c10",
+    "source": "sklearn bundled load_digits",
+    "test_examples": 540,
+    "train_examples": 1257
+  },
+  "elapsed_seconds": 1.2087450000008175,
+  "experiment": "real_digits_mlp_hidden_permutation_transport",
+  "final": {
+    "canonical_fedavg": {
+      "heldout_accuracy": 0.8,
+      "heldout_loss": 0.9778233294858679,
+      "round": 18
+    },
+    "scrambled_raw_fedavg": {
+      "heldout_accuracy": 0.2462962962962963,
+      "heldout_loss": 1.7971253989066196,
+      "round": 18
+    },
+    "transported_fedavg": {
+      "heldout_accuracy": 0.8,
+      "heldout_loss": 0.9778233294858679,
+      "round": 18
+    }
+  },
+  "interpretation_boundary": [
+    "This is real-data neural-network training with synthetic known hidden-unit gauge transformations.",
+    "Transported FedAvg should reproduce gauge-canonical FedAvg by construction; this tests equivalence, not novel superiority.",
+    "Transforms are supplied exactly and never inferred; no general curvature or open-ended model alignment claim.",
+    "Input dataset is public and fixed; local labels never leave clients in the simulated federated loop."
+  ],
+  "max_gauge_equivariance_state_l2": 1.83468801829343e-15,
+  "model": {
+    "architecture": "MLP64x6x10_tanh",
+    "parameter_count": 460
+  },
+  "per_round": {
+    "canonical_fedavg": [
+      {
+        "heldout_accuracy": 0.24814814814814815,
+        "heldout_loss": 2.2855681483298804,
+        "round": 1
+      },
+      {
+        "heldout_accuracy": 0.37037037037037035,
+        "heldout_loss": 2.2644214571186803,
+        "round": 2
+      },
+      {
+        "heldout_accuracy": 0.4740740740740741,
+        "heldout_loss": 2.230535228148623,
+        "round": 3
+      },
+      {
+        "heldout_accuracy": 0.48148148148148145,
+        "heldout_loss": 2.1782349217843247,
+        "round": 4
+      },
+      {
+        "heldout_accuracy": 0.5185185185185185,
+        "heldout_loss": 2.103440492613619,
+        "round": 5
+      },
+      {
+        "heldout_accuracy": 0.5537037037037037,
+        "heldout_loss": 2.00741028175895,
+        "round": 6
+      },
+      {
+        "heldout_accuracy": 0.5814814814814815,
+        "heldout_loss": 1.8970137077470843,
+        "round": 7
+      },
+      {
+        "heldout_accuracy": 0.6055555555555555,
+        "heldout_loss": 1.7812951287886103,
+        "round": 8
+      },
+      {
+        "heldout_accuracy": 0.6407407407407407,
+        "heldout_loss": 1.6678600587070063,
+        "round": 9
+      },
+      {
+        "heldout_accuracy": 0.6611111111111111,
+        "heldout_loss": 1.5609466425453324,
+        "round": 10
+      },
+      {
+        "heldout_accuracy": 0.6888888888888889,
+        "heldout_loss": 1.462218849225936,
+        "round": 11
+      },
+      {
+        "heldout_accuracy": 0.7074074074074074,
+        "heldout_loss": 1.3719238345716054,
+        "round": 12
+      },
+      {
+        "heldout_accuracy": 0.7277777777777777,
+        "heldout_loss": 1.289630729018239,
+        "round": 13
+      },
+      {
+        "heldout_accuracy": 0.75,
+        "heldout_loss": 1.2147133108278572,
+        "round": 14
+      },
+      {
+        "heldout_accuracy": 0.7648148148148148,
+        "heldout_loss": 1.146580541393326,
+        "round": 15
+      },
+      {
+        "heldout_accuracy": 0.7796296296296297,
+        "heldout_loss": 1.0847156506780207,
+        "round": 16
+      },
+      {
+        "heldout_accuracy": 0.7888888888888889,
+        "heldout_loss": 1.0286313638266427,
+        "round": 17
+      },
+      {
+        "heldout_accuracy": 0.8,
+        "heldout_loss": 0.9778233294858679,
+        "round": 18
+      }
+    ],
+    "scrambled_raw_fedavg": [
+      {
+        "heldout_accuracy": 0.2777777777777778,
+        "heldout_loss": 2.2946818119964494,
+        "round": 1
+      },
+      {
+        "heldout_accuracy": 0.2537037037037037,
+        "heldout_loss": 2.290556294178213,
+        "round": 2
+      },
+      {
+        "heldout_accuracy": 0.2462962962962963,
+        "heldout_loss": 2.2837882267258918,
+        "round": 3
+      },
+      {
+        "heldout_accuracy": 0.26666666666666666,
+        "heldout_loss": 2.271514479285336,
+        "round": 4
+      },
+      {
+        "heldout_accuracy": 0.2351851851851852,
+        "heldout_loss": 2.251076360625979,
+        "round": 5
+      },
+      {
+        "heldout_accuracy": 0.2537037037037037,
+        "heldout_loss": 2.219305335027646,
+        "round": 6
+      },
+      {
+        "heldout_accuracy": 0.2074074074074074,
+        "heldout_loss": 2.175017917911773,
+        "round": 7
+      },
+      {
+        "heldout_accuracy": 0.2111111111111111,
+        "heldout_loss": 2.121864626710234,
+        "round": 8
+      },
+      {
+        "heldout_accuracy": 0.21296296296296297,
+        "heldout_loss": 2.066048811922466,
+        "round": 9
+      },
+      {
+        "heldout_accuracy": 0.21296296296296297,
+        "heldout_loss": 2.0134177166561895,
+        "round": 10
+      },
+      {
+        "heldout_accuracy": 0.21296296296296297,
+        "heldout_loss": 1.967321350436376,
+        "round": 11
+      },
+      {
+        "heldout_accuracy": 0.2222222222222222,
+        "heldout_loss": 1.9284766192136216,
+        "round": 12
+      },
+      {
+        "heldout_accuracy": 0.21851851851851853,
+        "heldout_loss": 1.8961667869222378,
+        "round": 13
+      },
+      {
+        "heldout_accuracy": 0.22407407407407406,
+        "heldout_loss": 1.8692660993380128,
+        "round": 14
+      },
+      {
+        "heldout_accuracy": 0.23703703703703705,
+        "heldout_loss": 1.84670716621327,
+        "round": 15
+      },
+      {
+        "heldout_accuracy": 0.22592592592592592,
+        "heldout_loss": 1.827607487940262,
+        "round": 16
+      },
+      {
+        "heldout_accuracy": 0.24259259259259258,
+        "heldout_loss": 1.8112649439503776,
+        "round": 17
+      },
+      {
+        "heldout_accuracy": 0.2462962962962963,
+        "heldout_loss": 1.7971253989066196,
+        "round": 18
+      }
+    ],
+    "transported_fedavg": [
+      {
+        "heldout_accuracy": 0.24814814814814815,
+        "heldout_loss": 2.2855681483298804,
+        "round": 1
+      },
+      {
+        "heldout_accuracy": 0.37037037037037035,
+        "heldout_loss": 2.2644214571186803,
+        "round": 2
+      },
+      {
+        "heldout_accuracy": 0.4740740740740741,
+        "heldout_loss": 2.230535228148623,
+        "round": 3
+      },
+      {
+        "heldout_accuracy": 0.48148148148148145,
+        "heldout_loss": 2.1782349217843247,
+        "round": 4
+      },
+      {
+        "heldout_accuracy": 0.5185185185185185,
+        "heldout_loss": 2.103440492613619,
+        "round": 5
+      },
+      {
+        "heldout_accuracy": 0.5537037037037037,
+        "heldout_loss": 2.00741028175895,
+        "round": 6
+      },
+      {
+        "heldout_accuracy": 0.5814814814814815,
+        "heldout_loss": 1.8970137077470843,
+        "round": 7
+      },
+      {
+        "heldout_accuracy": 0.6055555555555555,
+        "heldout_loss": 1.7812951287886105,
+        "round": 8
+      },
+      {
+        "heldout_accuracy": 0.6407407407407407,
+        "heldout_loss": 1.6678600587070063,
+        "round": 9
+      },
+      {
+        "heldout_accuracy": 0.6611111111111111,
+        "heldout_loss": 1.5609466425453324,
+        "round": 10
+      },
+      {
+        "heldout_accuracy": 0.6888888888888889,
+        "heldout_loss": 1.462218849225936,
+        "round": 11
+      },
+      {
+        "heldout_accuracy": 0.7074074074074074,
+        "heldout_loss": 1.3719238345716056,
+        "round": 12
+      },
+      {
+        "heldout_accuracy": 0.7277777777777777,
+        "heldout_loss": 1.289630729018239,
+        "round": 13
+      },
+      {
+        "heldout_accuracy": 0.75,
+        "heldout_loss": 1.2147133108278572,
+        "round": 14
+      },
+      {
+        "heldout_accuracy": 0.7648148148148148,
+        "heldout_loss": 1.146580541393326,
+        "round": 15
+      },
+      {
+        "heldout_accuracy": 0.7796296296296297,
+        "heldout_loss": 1.0847156506780207,
+        "round": 16
+      },
+      {
+        "heldout_accuracy": 0.7888888888888889,
+        "heldout_loss": 1.0286313638266424,
+        "round": 17
+      },
+      {
+        "heldout_accuracy": 0.8,
+        "heldout_loss": 0.9778233294858679,
+        "round": 18
+      }
+    ]
+  },
+  "schema_version": 1,
+  "scope": "real_dataset_local_client_neural_training_exact_known_gauge",
+  "status": "COMPLETED"
+}

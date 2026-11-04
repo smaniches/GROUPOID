@@ -1,0 +1,247 @@
+"""Paired real-digit neural-network FL under exact hidden-neuron gauge transformations.
+
+This is a **gauge-equivariance integration test**, not evidence that alignment
+beats canonical FedAvg, that frame maps can be discovered, or that curved
+manifold aggregation works on unconstrained neural parameters.
+Uses sklearn's bundled 8x8 handwritten digits; no remote dataset or test tuning.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import math
+import time
+from dataclasses import dataclass
+
+import numpy as np
+import torch
+from sklearn.datasets import load_digits
+from sklearn.model_selection import train_test_split
+
+
+HIDDEN = 6
+CLASSES = 10
+FEATURES = 64
+DIM = HIDDEN * FEATURES + HIDDEN + CLASSES * HIDDEN + CLASSES
+
+
+def pack(weights):
+    return np.concatenate([w.detach().cpu().numpy().ravel() for w in weights])
+
+
+def unpack(v):
+    v = np.asarray(v)
+    assert v.size == DIM
+    sizes = [HIDDEN * FEATURES, HIDDEN, CLASSES * HIDDEN, CLASSES]
+    a, b, c, d = np.split(v, np.cumsum(sizes)[:-1])
+    return [a.reshape(HIDDEN, FEATURES), b, c.reshape(CLASSES, HIDDEN), d]
+
+
+def permutation_indices(perm):
+    """Return indices q where local flattened state = common[q]."""
+    p = np.asarray(perm)
+    assert sorted(p.tolist()) == list(range(HIDDEN))
+    a = np.arange(HIDDEN * FEATURES).reshape(HIDDEN, FEATURES)[p].ravel()
+    b = (HIDDEN * FEATURES + np.arange(HIDDEN))[p]
+    c = (HIDDEN * FEATURES + HIDDEN + np.arange(CLASSES * HIDDEN).reshape(CLASSES, HIDDEN)[:, p]).ravel()
+    d = HIDDEN * FEATURES + HIDDEN + CLASSES * HIDDEN + np.arange(CLASSES)
+    q = np.concatenate([a, b, c, d])
+    assert np.unique(q).size == DIM
+    return q
+
+
+def apply_gauge(common, q):
+    return common[q]
+
+
+def remove_gauge(local, q):
+    common = np.empty_like(local)
+    common[q] = local
+    return common
+
+
+def nonlinear_logit(v, x):
+    w1, b1, w2, b2 = unpack(v)
+    return np.tanh(x @ w1.T + b1) @ w2.T + b2
+
+
+def cross_entropy_and_acc(v, x, y):
+    logits = nonlinear_logit(v, x)
+    target = logits[np.arange(len(y)), y]
+    shift = logits.max(axis=1)
+    log_prob = target - (shift + np.log(np.exp(logits - shift[:, None]).sum(axis=1)))
+    return float(-log_prob.mean()), float((logits.argmax(axis=1) == y).mean())
+
+
+def local_fit(global_v, q, x, y, steps, lr, weight_decay=0.0):
+    model = torch.nn.Sequential(torch.nn.Linear(FEATURES, HIDDEN), torch.nn.Tanh(), torch.nn.Linear(HIDDEN, CLASSES)).double()
+    w = unpack(apply_gauge(global_v, q))
+    with torch.no_grad():
+        model[0].weight.copy_(torch.from_numpy(w[0]))
+        model[0].bias.copy_(torch.from_numpy(w[1]))
+        model[2].weight.copy_(torch.from_numpy(w[2]))
+        model[2].bias.copy_(torch.from_numpy(w[3]))
+    xx = torch.from_numpy(x)
+    yy = torch.from_numpy(y)
+    opt = torch.optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay)
+    for _ in range(steps):
+        opt.zero_grad(set_to_none=True)
+        loss = torch.nn.functional.cross_entropy(model(xx), yy)
+        loss.backward()
+        opt.step()
+    return pack([model[0].weight, model[0].bias, model[2].weight, model[2].bias])
+
+
+def weighted_average(vectors, sizes):
+    weights = np.asarray(sizes, dtype=np.float64)
+    return np.average(np.vstack(vectors), axis=0, weights=weights)
+
+
+def allocate_non_iid(y, nclients, seed, alpha=0.4):
+    rng = np.random.default_rng(seed)
+    selected = [[] for _ in range(nclients)]
+    for cls in np.unique(y):
+        indices = np.flatnonzero(y == cls)
+        rng.shuffle(indices)
+        portions = rng.dirichlet(np.full(nclients, alpha))
+        counts = rng.multinomial(len(indices), portions)
+        cursor = 0
+        for c, count in enumerate(counts):
+            selected[c].extend(indices[cursor : cursor + count].tolist())
+            cursor += count
+    assert sum(map(len, selected)) == len(y)
+    assert len({i for cell in selected for i in cell}) == len(y)
+    if min(map(len, selected)) < 32:
+        raise ValueError("insufficient samples under this seeded non-IID partition")
+    return [np.array(cell, dtype=np.int64) for cell in selected]
+
+
+def check_gauge_equivariance(v, q, x):
+    before = nonlinear_logit(v, x)
+    after = nonlinear_logit(apply_gauge(v, q), x)
+    if not np.allclose(before, after, atol=1e-13, rtol=1e-13):
+        raise AssertionError("hidden unit relabelling changed predictions")
+
+
+@dataclass(frozen=True)
+class Contract:
+    seed: int = 20261103
+    rounds: int = 18
+    local_steps: int = 4
+    lr: float = 0.4
+    clients: int = 4
+    alpha: float = 0.4
+
+
+def verify_project_aggregation(local_states, permutation_vectors, sizes, expected):
+    """Check the actual GROUPOID API against the independent exact-permutation oracle."""
+    import networkx as nx
+    from geomstats.geometry.euclidean import Euclidean
+    from groupoid.aggregation import TransportGroupoidAggregator
+
+    g = nx.DiGraph()
+    g.add_nodes_from(str(k) for k in range(len(sizes)))
+    for k in range(1, len(sizes)):
+        g.add_edge(str(k), "0")
+    agg = TransportGroupoidAggregator(
+        manifold=Euclidean(dim=DIM), graph=g, base_node="0",
+    )
+    for k in range(1, len(sizes)):
+        # local=canonical[q], so point action local->canonical is Q^T = I[:,q].
+        T = np.eye(DIM, dtype=np.float64)[:, permutation_vectors[k]]
+        agg.register_transport(str(k), "0", T)
+    answer = agg.aggregate(
+        {str(k): v for k, v in enumerate(local_states)},
+        weights={str(k): float(n) for k, n in enumerate(sizes)},
+    )
+    discrepancy = float(np.linalg.norm(answer.global_params - expected))
+    assert discrepancy < 1e-8, discrepancy
+    assert answer.passes_consistency_threshold
+    return {"status": "PASS", "actual_aggregator_global_l2_to_reference": discrepancy,
+            "actual_aggregator_cycle_defect": float(answer.cycle_basis_holonomy_defect)}
+
+
+def main(c: Contract, verify_groupoid: bool = False):
+    torch.set_num_threads(1)
+    torch.manual_seed(c.seed)
+    t0 = time.perf_counter()
+    ds = load_digits()
+    xx = (ds.data.astype(np.float64) / 16.0)
+    yy = ds.target.astype(np.int64)
+    x_tr, x_te, y_tr, y_te = train_test_split(xx, yy, test_size=0.3, random_state=c.seed, stratify=yy)
+    partitions = allocate_non_iid(y_tr, c.clients, c.seed, c.alpha)
+    gen = np.random.default_rng(c.seed + 1)
+    initial = gen.normal(0, 0.05, size=DIM)
+    perm_vectors = [np.arange(DIM)] + [permutation_indices(gen.permutation(HIDDEN)) for _ in range(c.clients - 1)]
+    for q in perm_vectors:
+        check_gauge_equivariance(initial, q, x_te[:11])
+        assert np.array_equal(remove_gauge(apply_gauge(initial, q), q), initial)
+    sizes = [len(s) for s in partitions]
+    arms = {"canonical_fedavg": initial.copy(), "scrambled_raw_fedavg": initial.copy(), "transported_fedavg": initial.copy()}
+    traces = {name: [] for name in arms}
+    mismatch = []
+    last_transported_local_states = None
+    last_transported_reference = None
+    for rnd in range(c.rounds):
+        for arm, global_v in list(arms.items()):
+            states = []
+            raw_states = []
+            for k, idx in enumerate(partitions):
+                q = (np.arange(DIM) if arm == "canonical_fedavg" else perm_vectors[k])
+                local = local_fit(global_v, q, x_tr[idx], y_tr[idx], c.local_steps, c.lr)
+                raw_states.append(local)
+                if arm == "transported_fedavg":
+                    states.append(remove_gauge(local, q))
+                else:
+                    states.append(local)
+            if arm == "transported_fedavg":
+                last_transported_local_states = raw_states
+            arms[arm] = weighted_average(states, sizes)
+            if arm == "transported_fedavg":
+                last_transported_reference = arms[arm].copy()
+            loss, acc = cross_entropy_and_acc(arms[arm], x_te, y_te)
+            traces[arm].append({"round": rnd + 1, "heldout_loss": loss, "heldout_accuracy": acc})
+        discrepancy = float(np.linalg.norm(arms["canonical_fedavg"] - arms["transported_fedavg"]))
+        mismatch.append(discrepancy)
+        if discrepancy > 5e-11:
+            raise AssertionError(f"transported model not gauge equivalent to canonical at round {rnd+1}: {discrepancy}")
+    bridge = (verify_project_aggregation(last_transported_local_states, perm_vectors, sizes, last_transported_reference)
+              if verify_groupoid else {"status": "NOT_RUN", "reason": "optional geomstats package/API check"})
+    outcome = {
+        "schema_version": 1, "experiment": "real_digits_mlp_hidden_permutation_transport",
+        "status": "COMPLETED", "scope": "real_dataset_local_client_neural_training_exact_known_gauge",
+        "contract": vars(c), "model": {"architecture": "MLP64x6x10_tanh", "parameter_count": DIM},
+        "dataset": {"source": "sklearn bundled load_digits", "examples": int(len(yy)),
+                    "train_examples": int(len(y_tr)), "test_examples": int(len(y_te)),
+                    "raw_data_digest_sha256": hashlib.sha256(np.ascontiguousarray(ds.data).tobytes()).hexdigest(),
+                    "partition_counts": sizes, "client_label_distributions": [[int((y_tr[idx] == j).sum()) for j in range(CLASSES)] for idx in partitions]},
+        "final": {k: v[-1] for k, v in traces.items()},
+        "max_gauge_equivariance_state_l2": max(mismatch),
+        "per_round": traces, "elapsed_seconds": time.perf_counter()-t0,
+        "project_integration": bridge,
+        "interpretation_boundary": [
+          "This is real-data neural-network training with synthetic known hidden-unit gauge transformations.",
+          "Transported FedAvg should reproduce gauge-canonical FedAvg by construction; this tests equivalence, not novel superiority.",
+          "Transforms are supplied exactly and never inferred; no general curvature or open-ended model alignment claim.",
+          "Input dataset is public and fixed; local labels never leave clients in the simulated federated loop."
+        ],
+    }
+    return outcome
+
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--seed", type=int, default=20261103)
+    ap.add_argument("--rounds", type=int, default=18)
+    ap.add_argument("--local-steps", type=int, default=4)
+    ap.add_argument("--lr", type=float, default=0.4)
+    ap.add_argument("--clients", type=int, default=4)
+    ap.add_argument("--out", required=True)
+    ap.add_argument("--verify-groupoid", action="store_true")
+    args = ap.parse_args()
+    payload=main(Contract(args.seed,args.rounds,args.local_steps,args.lr,args.clients), verify_groupoid=args.verify_groupoid)
+    with open(args.out, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2, sort_keys=True)
+        f.write("\n")
+    print(json.dumps({"status": payload["status"], "final": payload["final"], "max_discrepancy": payload["max_gauge_equivariance_state_l2"], "elapsed_seconds": payload["elapsed_seconds"]}, sort_keys=True))
