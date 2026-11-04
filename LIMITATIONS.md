@@ -126,6 +126,6 @@ system. The following limitations apply.
 - The transport and persistence modules retain their ground-truth validations
   at the scopes stated above. The optimizer module remains validated for descent
   to a known target on S^2 and has no general convergence-rate analysis.
-- No end-to-end test with real neural network training exists.
+- The archived six-seed handwritten-digits experiment trains a small MLP with simulated clients and known hidden-unit permutations. No complete real-neural federated training test has been demonstrated through the core aggregation API; the independent package integration test is smaller and separate.
 - Property-based tests use 500 examples per property, which provides
   reasonable but not exhaustive coverage of edge cases.

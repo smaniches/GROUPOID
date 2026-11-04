@@ -48,7 +48,7 @@
   `experiments/RESULTS.md`, including the failed null check and the
   documented deviation. The hypothesis remains unvalidated on real
   federated learning tasks.
-- No federated training loop with real neural networks exists yet.
+- A standalone six-seed handwritten-digits MLP experiment with simulated clients and known, externally supplied hidden-unit permutations is archived under `experiments/real_neural/`. It is **not** an integrated end-to-end neural federated training demonstration through `TransportGroupoidAggregator`, and it does not infer unknown alignments.
 - No differential privacy mechanism is implemented.
 - No formal convergence analysis or proofs exist.
 - The package is distributed only as early development pre-releases; no stable
