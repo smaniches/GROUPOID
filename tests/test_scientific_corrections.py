@@ -216,6 +216,18 @@ def test_aggregator_accepts_reciprocal_reverse_registration():
     )
 
 
+def test_registration_snapshots_caller_owned_matrix():
+    agg = make_sphere_aggregator()
+    original = np.eye(3)
+
+    agg.register_transport("A", "B", original)
+    original[0, 0] = 0.0  # Original input is now singular.
+
+    np.testing.assert_array_equal(agg.morphisms[("A", "B")].transport_map, np.eye(3))
+    # The originally validated arrow must remain reciprocal with the identity.
+    agg.register_transport("B", "A", np.eye(3))
+
+
 class ProjectionSphere:
     def belongs(self, point: np.ndarray) -> bool:
         return bool(np.isclose(np.linalg.norm(point), 1.0, atol=1e-10))
