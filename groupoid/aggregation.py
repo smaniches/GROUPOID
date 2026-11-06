@@ -109,6 +109,9 @@ class TransportGroupoidAggregator:
     ) -> None:
         """Register an invertible candidate point action between two clients.
 
+        Registration snapshots the supplied matrix so a later caller mutation
+        cannot bypass the invertibility and reciprocity checks.
+
         Registration establishes only the algebraic prerequisites that can be
         checked without seeing a point: a finite square matrix with a finite
         inverse. If the opposite orientation is already registered, the two
@@ -117,7 +120,8 @@ class TransportGroupoidAggregator:
         the transported points back onto ``self.manifold``. Passing these checks
         validates the exercised point actions, not every possible manifold point.
         """
-        candidate = np.asarray(matrix, dtype=float)
+        # Snapshot the input before validating it: callers retain ownership of their arrays.
+        candidate = np.array(matrix, dtype=float, copy=True)
         if candidate.ndim != 2 or candidate.shape[0] != candidate.shape[1]:
             raise InvalidPointTransportError(
                 f"transport {source}->{target} must be a square matrix; "
