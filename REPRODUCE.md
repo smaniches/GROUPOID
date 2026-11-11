@@ -9,11 +9,15 @@ repeated runs, and matches the invariants asserted in
 ## Environment
 
 - **Python 3.11 or 3.12** (Python 3.10 reached upstream EOL on
-  2026-10-01; not 3.13+ because the `numpy<2.0` / `scipy<1.16`
-  pins required by geomstats have no wheels there -- see
-  [LIMITATIONS.md](LIMITATIONS.md)).
-- Pins used to produce the receipt below: `numpy 1.26.4`, `scipy 1.13.1`,
-  `geomstats 2.8.0` (resolved by the constraints in `pyproject.toml`).
+  2026-10-01; not 3.13+ because no NumPy release allowed by the `numpy<2.0`
+  requirement publishes wheels there -- see [LIMITATIONS.md](LIMITATIONS.md)).
+- Environment in which the receipt below was first produced: `numpy 1.26.4`,
+  `scipy 1.13.1`, `geomstats 2.8.0`, resolved by the requirements of that time,
+  which excluded SciPy 1.14 and later. The current requirement is
+  `scipy>=1.10,<1.18`, so a fresh install resolves a newer SciPy. The receipt's
+  computation uses NumPy only; on 2026-11-11 it gave the same output with
+  SciPy 1.13.1 and 1.17.1, with the two machine-epsilon residuals at
+  `2.220e-16` and `7.190e-16` on that machine.
 
 ## Install
 

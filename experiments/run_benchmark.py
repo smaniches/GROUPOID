@@ -31,6 +31,12 @@ SIGMAS = [0.05, 0.2]
 EPSILONS = [0.0, 0.1, 0.3]
 N_SEEDS = 25
 NORTH = np.array([0.0, 0.0, 1.0])
+# Retrospective pin (added for v0.1.0.dev10, not part of the original runner):
+# results.json was produced with the karcher_mean default of that time,
+# tol=1e-6. The library default is now 1e-12, so the historical setting is
+# passed explicitly to keep this runner reproducing results.json. See
+# CORRECTION_NOTICE.md, F03.
+HISTORICAL_KARCHER_TOL = 1e-6
 
 
 def rotation(axis: np.ndarray, angle: float) -> np.ndarray:
@@ -76,7 +82,7 @@ def karcher_with_warning_flag(manifold, points):
 
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        est = karcher_mean(manifold, points)
+        est = karcher_mean(manifold, points, tol=HISTORICAL_KARCHER_TOL)
     warned = any("Maximum number of iterations" in str(w.message) for w in caught)
     return est, warned
 
@@ -118,7 +124,9 @@ def run_one(manifold, alpha_i: int, sigma_i: int, eps_i: int, seed_i: int) -> di
     # M4: the full GROUPOID pipeline.
     edges = [(str(i), str(j)) for i in range(N_CLIENTS) for j in range(i + 1, N_CLIENTS)]
     graph = nx.DiGraph(edges)
-    agg = TransportGroupoidAggregator(manifold=manifold, graph=graph, base_node="0")
+    agg = TransportGroupoidAggregator(
+        manifold=manifold, graph=graph, base_node="0", karcher_tol=HISTORICAL_KARCHER_TOL
+    )
     for (src, tgt), matrix in transports.items():
         agg.register_transport(src, tgt, matrix)
     with warnings.catch_warnings(record=True) as caught:

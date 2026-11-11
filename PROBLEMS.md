@@ -112,6 +112,23 @@ test that fails on the pre-fix code.
    The preregistered benchmark is unaffected because it registers explicit
    SO(3) rotations directly and never calls either ladder.
 
+10. **The Karcher-mean tolerance did not control the accuracy of the mean
+    (corrected in v0.1.0.dev10).** `karcher_mean` passes `tol` to geomstats,
+    whose gradient criterion stops the iteration once the squared Riemannian
+    gradient norm of the Frechet function is at most `tol * dim`. The former
+    default `tol = 1e-6` therefore allowed a gradient norm of about `1.41e-3`
+    on S^2 at such a stop, and on the benchmark's
+    oracle problems the estimates were off by up to `1.4e-3` rad against an
+    independent minimizer. The default is now `1e-12` (a gradient-criterion
+    threshold of about `1.41e-6` on S^2), the stopping contract, including the
+    two exits that do not establish this bound, is documented, and the
+    aggregator forwards a `karcher_tol` setting. The regression tests use a symmetric ring
+    whose mean is known exactly and an independent numpy minimizer. The stored
+    benchmark is unchanged and still reproduced, because its runner now passes
+    the historical tolerance explicitly; a rerun with the new tolerance leaves
+    every verdict unchanged, but stored values of about `1e-3` rad or less
+    include solver error (`CORRECTION_NOTICE.md`, F03).
+
 ## Known mathematical limitations (not bugs — documented honestly)
 
 From `LIMITATIONS.md`; recorded here so absence of a guarantee is never mistaken
@@ -168,6 +185,7 @@ utilities have direct tests against algebraic, analytic, or constructed referenc
 cases. The point-valued aggregation pipeline is supported for explicit point
 actions that satisfy its runtime manifold contract; the current S^2 evidence uses
 SO(3) rotations. The central scientific hypothesis remains supported only by the
-preregistered synthetic benchmark and remains **unvalidated on real federated
+preregistered synthetic benchmark, whose plan was committed before its results
+but not externally registered, and remains **unvalidated on real federated
 learning tasks**. Historical preregistration and result artifacts are preserved;
 current interpretation corrections are documented in `CORRECTION_NOTICE.md`.

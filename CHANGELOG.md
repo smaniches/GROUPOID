@@ -8,6 +8,87 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.1.0.dev10] - 2026-11-11
+
+Pre-alpha corrective prerelease. It distributes one already-merged fix to
+transport registration (#95), corrects the Karcher-mean default tolerance, and
+corrects how the benchmark's preregistration, its H2 result and the SciPy
+requirement are described. Stored benchmark results are unchanged; the only
+edit to a historical experiment file is an explicit tolerance argument in
+`experiments/run_benchmark.py` that leaves its output unchanged. See
+`CORRECTION_NOTICE.md`, F03 to F06.
+
+### Changed
+
+- **Karcher mean default tolerance is `1e-12` (was `1e-6`):** `karcher_mean`
+  passes `tol` to geomstats, whose gradient criterion stops the iteration once
+  the squared Riemannian gradient norm of the Frechet function is at most
+  `tol * dim`. At such a stop the old default allowed a gradient norm of about
+  `1.41e-3` on S^2, and it left errors of up to `1.4e-3` rad on the benchmark's
+  oracle problems; with the new default the criterion corresponds to a gradient
+  norm of about `1.41e-6` (errors up to `1.7e-6` rad on all benchmark Karcher
+  problems, at most 13 iterations, about 1.3 to 1.6 times the time per call).
+  The stopping contract, including the near-zero-variance and iteration-limit
+  exits that do not establish this bound, is documented in the docstring, and
+  `TransportGroupoidAggregator` has a new `karcher_tol` field, with the same
+  default, that it forwards to `karcher_mean`. Results differ from
+  v0.1.0.dev9 by up to the old solver error; pass `tol=1e-6` or
+  `karcher_tol=1e-6` to reproduce earlier outputs.
+
+### Fixed
+
+- **Transport registration stores its own copy of the matrix (#95):**
+  `TransportGroupoidAggregator.register_transport` kept a reference to the
+  caller's array when it was already a float64 NumPy array (or a view of
+  one). Changing that array after registration changed the registered point
+  action without repeating the finiteness, invertibility and reciprocity
+  checks, and a later reverse registration was checked against the changed
+  matrix. Registration now copies the matrix before validating it and stores
+  the copy. Every earlier release stored the caller's array; the checks that
+  such a change bypassed exist from v0.1.0.dev5. Code that changed an array
+  after registering it, expecting the registered transport to follow, must
+  register the new matrix instead.
+
+### Documentation and scientific record
+
+- **Benchmark solver accuracy (F03):** stored benchmark values of about
+  `1e-3` rad or less include Karcher solver error of their own order. A
+  sensitivity rerun of the unmodified runner and analysis with `tol=1e-12`
+  leaves every verdict unchanged; at `sigma = 0.05` the extrinsic-versus-Karcher
+  gaps are two to three and a half times smaller than stored.
+  `experiments/run_benchmark.py` now passes the historical tolerance explicitly
+  so that it keeps reproducing `results.json`.
+- **Preregistration provenance (F04):** the analysis plan was committed before
+  the runner and results within pull request #49 (`ea7cf5f`, `43fcad5`,
+  `ff7f461`); it was not registered externally, and the push order is the
+  author's account. README, STATUS, LIMITATIONS and the experiments index now
+  say so; `PREREGISTRATION.md` is unchanged.
+- **H2 interpretation (F05):** the pooled criterion was met as stored
+  (rho = 0.587, p = 1e-4), but within each corruption level the association is
+  absent (rho = -0.030 and 0.004; partial rho given the level -0.033), so H2 is
+  not evidence of within-level prediction.
+- **SciPy requirement (F06):** README, REPRODUCE and LIMITATIONS now state the
+  `pyproject.toml` requirement `scipy>=1.10,<1.18` instead of `scipy<1.16`,
+  attribute the Python 3.13 exclusion to `numpy<2.0`, and record the
+  historical SciPy versions (1.13.1 for the REPRODUCE receipt, 1.15.3 for the
+  benchmark).
+
+### Validation and scope
+
+- New regression tests: Karcher accuracy against a symmetric ring's exact mean
+  and an independent numpy minimizer, and aggregator forwarding of
+  `karcher_tol` (these fail with the old default); the gradient-criterion
+  bound at several tolerances on test inputs; all 600
+  stored benchmark runs re-executed against `results.json` (fails without the
+  historical tolerance in the runner); the stored H2 statistics and the
+  within-level and partial associations recomputed from `results.json`; and
+  documented NumPy/SciPy upper bounds checked against `pyproject.toml` (failed
+  on the previous documents).
+- The regression test added in #95 fails on the v0.1.0.dev9 source and on
+  the published v0.1.0.dev9 wheel, and passes on this release.
+- The archived neural experiment replay tests pass unchanged. Python 3.11 and
+  3.12 support and the pre-alpha constraints are unchanged.
+
 ## [0.1.0.dev9] - 2026-11-04
 
 Pre-alpha corrective prerelease distributing already-merged numerical and

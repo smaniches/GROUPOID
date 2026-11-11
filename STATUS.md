@@ -37,17 +37,21 @@
   exact norm preservation (tangent projection is the fallback for
   metrics without parallel transport). No general convergence-rate
   analysis exists, and it is not yet integrated into the main pipeline.
-- A preregistered synthetic benchmark (`experiments/`) tests the central
-  hypothesis: the transport benefit under frame misalignment is supported
-  in all preregistered cells (an effect largely built into the synthetic
-  setup), the ablation shows transport -- not the intrinsic mean --
-  accounts for essentially all of it, and the fixed NetworkX cycle-basis
-  holonomy defect is positively associated with aggregation error across the
-  two corruption levels (Spearman rho = 0.587, permutation p = 1e-4) while
-  not ranking runs within a level. See
-  `experiments/RESULTS.md`, including the failed null check and the
-  documented deviation. The hypothesis remains unvalidated on real
-  federated learning tasks.
+- A synthetic benchmark (`experiments/`) tests the central hypothesis. Its
+  analysis plan was committed before the runner and results in the same pull
+  request; it was not externally registered (see `CORRECTION_NOTICE.md`, F04).
+  The transport benefit under frame misalignment is supported in all
+  preregistered cells (an effect largely built into the synthetic setup), the
+  ablation shows transport -- not the intrinsic mean -- accounts for
+  essentially all of it, and the fixed NetworkX cycle-basis holonomy defect is
+  positively associated with aggregation error across the two corruption
+  levels (Spearman rho = 0.587, permutation p = 1e-4) while showing no
+  association within a level (rho = -0.030 and 0.004; F05). The stored results
+  used the former Karcher tolerance, so stored values of about 1e-3 rad or less
+  include solver error; an accurate-solver rerun leaves every verdict unchanged
+  (F03). See `experiments/RESULTS.md`, including the failed null check and the
+  documented deviation. The hypothesis remains unvalidated on real federated
+  learning tasks.
 - A standalone six-seed handwritten-digits MLP experiment with simulated clients and known, externally supplied hidden-unit permutations is archived under `experiments/real_neural/`. It is **not** an integrated end-to-end neural federated training demonstration through `TransportGroupoidAggregator`, and it does not infer unknown alignments.
 - No differential privacy mechanism is implemented.
 - No formal convergence analysis or proofs exist.
@@ -58,7 +62,7 @@
 
 | Component | Status | Evidence |
 |---|---|---|
-| Karcher mean | Tested | Hypothesis: mean of identical points = that point (500 examples) |
+| Karcher mean | Tested | Hypothesis: mean of identical points = that point (500 examples); default within 2 x 1.41e-6 rad of a symmetric ring's exact mean and of an independent numpy minimizer; returned gradient norm within `sqrt(tol * dim)` on the test inputs (the bound documented for gradient-criterion stops) |
 | Morphism composition | Tested | Hypothesis: associativity verified (500 examples) |
 | Cycle-basis holonomy defect | Tested with scope qualification | Exact zero on complete coboundary transports; closed-form nonzero holonomy checks; same-basis numerical recomputation; basis/gauge regressions; incomplete basis cycles and nonreciprocal opposite registrations fail closed |
 | Sheaf restriction maps | Tested | Hypothesis: functoriality verified (500 examples) |
@@ -90,5 +94,5 @@ not capture.
 
 ## Versioning
 
-This project uses `0.1.0.dev9` to indicate pre-release development.
+This project uses `0.1.0.dev10` to indicate pre-release development.
 The API is unstable and will change without notice.
