@@ -9,13 +9,17 @@ cycle-basis holonomy defect responds to corrupted transports.
 
 - [`PREREGISTRATION.md`](PREREGISTRATION.md): hypotheses, data-generating
   process, factor grid, seeds, metrics, analysis plan, and decision criteria.
-  The preserved Git DAG establishes that the preregistration commit precedes the
-  runner and result commits. The project record states that the preregistration
-  was also pushed before benchmark execution; public Git commit history alone
-  does not independently prove the push time relative to local computation.
+  "Preregistered" here means committed first, not externally registered: in
+  pull request #49 (preserved on GitHub as `refs/pull/49/head`) the plan
+  (`ea7cf5f`) was committed before the runner (`43fcad5`) and the results
+  (`ff7f461`), within about five minutes. Git does not record push times, and
+  no external registry or timestamp exists, so the author's account that the
+  plan was pushed before execution is not independently verifiable. See
+  [`../CORRECTION_NOTICE.md`](../CORRECTION_NOTICE.md), F04.
 - [`run_benchmark.py`](run_benchmark.py): the historical runner, 600 seeded runs
   on S^2, a 2x2 method ablation against an oracle estimand, with manipulation
-  checks asserted at runtime.
+  checks asserted at runtime. Since v0.1.0.dev10 it passes the historical Karcher
+  tolerance (`1e-6`) explicitly, because the library default changed (F03).
 - [`analyze.py`](analyze.py): the historical preregistered analysis; writes
   `RESULTS.md` from `results.json`.
 - [`results.json`](results.json) / [`RESULTS.md`](RESULTS.md): preserved
@@ -36,6 +40,8 @@ python experiments/analyze.py
 
 Seeds are fixed; `results.json` is bit-reproducible up to floating-point
 differences across BLAS/CPU. Compare the analysis tables, not raw bytes.
+`run_benchmark.py` overwrites `results.json`; `tests/test_frozen_benchmark.py`
+instead re-executes all 600 runs and compares them with the stored records.
 
 ## Summary of findings under the corrected construct definition
 
@@ -47,16 +53,29 @@ differences across BLAS/CPU. Compare the analysis tables, not raw bytes.
 - **Historical H2 criterion met, interpretation corrected:** pooled over the
   400 corrupted-transport runs, the fixed NetworkX cycle-basis maximum
   Frobenius holonomy defect has Spearman rho = 0.587 with aggregation error and
-  permutation p = 1e-4. The within-cell correlations are near zero. The pooled
-  relationship is therefore primarily a between-corruption-level association.
-  The stored statistic is unchanged, but it must not be described as evidence
-  that a canonical H^1 norm predicts error.
+  permutation p = 1e-4, which meets the prespecified criterion. Within each
+  corruption level the association is absent (rho = -0.030 at epsilon = 0.1
+  and 0.004 at epsilon = 0.3, n = 200 each; partial rho given the level
+  -0.033), so the pooled value reflects that defect and error both grow with
+  the corruption level. The stored statistic is unchanged, but it is not
+  evidence that the defect, or a canonical H^1 norm, predicts error among runs
+  at the same corruption level (CORRECTION_NOTICE.md, F05).
 - **H3 supported (4/4 cells):** the preregistered ablation shows transport
   accounts for essentially all of the improvement; the Karcher-vs-extrinsic
   mean margin is 2 to 4 orders of magnitude smaller on this synthetic data.
+  At sigma = 0.05 the stored margins (4.3e-5 and 4.2e-5) are mostly solver
+  error; with an accurate solver they are 2.0e-5 and 1.2e-5 (F03).
 - **Null check (a) failed as specified:** the preregistered check assumed all
   methods tie at the null, while Karcher-based methods compute the oracle
-  estimand exactly there. The failure remains reported as a failure.
+  estimand exactly there. The failure remains reported as a failure. Its
+  stored magnitude at sigma = 0.05 (3.0e-5) is about three times the
+  solver-accurate extrinsic-versus-Karcher gap (9.7e-6); see F03.
+- **Solver accuracy (retrospective):** the stored results used the former
+  Karcher default `tol = 1e-6`, which left oracle errors of up to 1.4e-3 rad
+  (median 3e-5 to 7e-5). Rerunning the unmodified runner and analysis with
+  `tol = 1e-12` leaves every verdict unchanged (CORRECTION_NOTICE.md, F03);
+  stored values of about 1e-3 rad or less should not be read as measured
+  geometric gaps.
 
 ## What this does not show
 

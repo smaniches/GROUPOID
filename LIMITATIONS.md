@@ -23,7 +23,18 @@ system. The following limitations apply.
 ## Mathematical limitations
 
 - The Karcher mean computation delegates to geomstats FrechetMean.
-  Convergence depends on the manifold and point distribution.
+  Convergence depends on the manifold and point distribution. `tol` is the
+  threshold of a stopping criterion on the squared Riemannian gradient norm of
+  the Frechet function per manifold dimension, not a distance to the true mean.
+  When the iteration ends on that criterion, `||grad F|| <= sqrt(tol * dim)` at
+  the returned point, and the geodesic error is roughly that bound divided by
+  the local strong-convexity constant, which shrinks as the points spread
+  toward a hemisphere. With the default `tol = 1e-12` the criterion corresponds
+  to a gradient norm of about `1.41e-6` on S^2; with the default before
+  v0.1.0.dev10, `1e-6`, to about `1.41e-3`. geomstats can also stop when the
+  weighted variance is numerically zero, which implies only
+  `||grad F|| <= 1e-4`, or after `max_iter` iterations, which it only logs
+  through `logging` and which implies no bound.
 - The quantity formerly described as an `H^1` norm is the maximum
   Frobenius deviation from identity over the particular cycle basis returned by
   `networkx.cycle_basis` on the undirected graph. Its exact zero set can detect
@@ -101,10 +112,32 @@ system. The following limitations apply.
 - No formal convergence rate analysis exists for the groupoid
   aggregation method.
 
+## Benchmark evidence
+
+- The stored benchmark results were computed with the former Karcher default
+  `tol = 1e-6`, which left oracle errors of up to `1.4e-3` rad. Stored values of
+  about `1e-3` rad or less (null check (a), the M1 error at `alpha = 0`, the M3
+  errors and intrinsic-mean margins at `epsilon = 0`) include solver error of
+  the same order; at `sigma = 0.05` they are two to three and a half times the
+  solver-accurate values. A rerun with `tol = 1e-12` leaves every verdict
+  unchanged (CORRECTION_NOTICE.md, F03).
+- "Preregistered" means that the analysis plan was committed before the runner
+  and the results within one pull request. It was not registered externally,
+  and Git records neither push times nor trusted commit times (F04).
+- The H2 criterion was met only as a pooled association across two corruption
+  levels; within a level the defect does not predict or rank aggregation error
+  (F05).
+
 ## Dependency constraints
 
-- Requires `numpy < 2.0` due to geomstats compatibility.
-- Requires `scipy < 1.16` for the same reason.
+- Requires `numpy < 2.0` due to geomstats compatibility. No NumPy 1.x release
+  publishes wheels for Python 3.13+, which is why `requires-python` stops at
+  3.12.
+- SciPy is required as `scipy>=1.10,<1.18` (`pyproject.toml`). The upper bound
+  caps the tested range (CI installs the newest release it allows, currently
+  1.17.1); it does not mark a known incompatibility. Historical artifacts
+  record the SciPy actually used: 1.13.1 for the `REPRODUCE.md` receipt and
+  1.15.3 for the benchmark `results.json`.
 - The `ripser` and `persim` packages may have build issues on
   some platforms (C++ compilation required).
 - The former required `torch` dependency was removed because the current

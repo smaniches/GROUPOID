@@ -9,7 +9,7 @@
 
 > **Pre-alpha research prototype.** This is an early-stage exploration of
 > groupoid-based aggregation for federated learning on Riemannian manifolds.
-> It is not a production federated learning system. The dev9 corrective prerelease distributes metric-aware numerical fixes and safer aggregation state updates; it does not establish real-world federated-learning improvements. See
+> It is not a production federated learning system. The dev10 corrective prerelease makes transport registration snapshot caller-owned matrices before validation, and tightens the default Karcher-mean tolerance so that its gradient stopping criterion corresponds to a gradient norm of about 1.4e-6 instead of 1.4e-3 on S^2; it also corrects how the benchmark's preregistration, its H2 result and the SciPy requirement are described. Stored benchmark results are unchanged. It does not establish real-world federated-learning improvements. See
 > [STATUS.md](STATUS.md), [LIMITATIONS.md](LIMITATIONS.md), and
 > [CORRECTION_NOTICE.md](CORRECTION_NOTICE.md).
 
@@ -128,23 +128,26 @@ diagnostic -- not a federated learning framework.
 
 In short: use Flower/FedML/TFF for the FL system, use geomstats/pymanopt for
 manifold math; GROUPOID is a research prototype testing a transport-groupoid
-aggregation operator against Euclidean FedAvg. A preregistered synthetic
-benchmark ([experiments/](experiments/)) supports the transport benefit under
-frame misalignment -- an effect largely built into the synthetic setup -- and
-shows that the fixed NetworkX cycle-basis holonomy defect is associated with
-aggregation error when the two corruption levels are pooled (Spearman rho =
-0.587, permutation p = 1e-4). The within-level correlations are near zero, so
-the statistic does not rank runs by error within a fixed corruption level. The
-hypothesis remains **unvalidated on real federated learning tasks** (see
-[STATUS.md](STATUS.md)).
+aggregation operator against Euclidean FedAvg. A synthetic benchmark
+([experiments/](experiments/)), whose analysis plan was committed before its
+runner and results but not externally registered, supports the transport
+benefit under frame misalignment -- an effect largely built into the synthetic
+setup -- and shows that the fixed NetworkX cycle-basis holonomy defect is
+associated with aggregation error when the two corruption levels are pooled
+(Spearman rho = 0.587, permutation p = 1e-4). Within each level the
+association is absent (rho = -0.030 and 0.004), so the statistic does not
+predict or rank runs by error at a fixed corruption level. The hypothesis
+remains **unvalidated on real federated learning tasks** (see
+[STATUS.md](STATUS.md) and [CORRECTION_NOTICE.md](CORRECTION_NOTICE.md)).
 
 ## Installation
 
 Requires **Python 3.11 or 3.12**. Python 3.10 reached end of life on
-October 1, 2026 and is no longer supported. Python 3.13+ is not supported: the
-`numpy<2.0` / `scipy<1.16` pins (needed for geomstats compatibility, see
-[LIMITATIONS.md](LIMITATIONS.md)) have no wheels there, so `pip` will refuse
-with a `Requires-Python` message rather than attempt a source build.
+October 1, 2026 and is no longer supported. Python 3.13+ is not supported:
+NumPy releases allowed by the `numpy<2.0` requirement (see
+[LIMITATIONS.md](LIMITATIONS.md)) publish no wheels for it, so `pip` will refuse
+with a `Requires-Python` message rather than attempt a source build. SciPy is
+required as `scipy>=1.10,<1.18`; CI tests the newest release in that range.
 
 From PyPI:
 

@@ -25,7 +25,7 @@ from groupoid.groupoid import (
     inverse,
     validate_reciprocal_transports,
 )
-from groupoid.manifold import karcher_mean
+from groupoid.manifold import DEFAULT_KARCHER_TOL, karcher_mean
 
 
 class DisconnectedClientGraphError(Exception):
@@ -91,6 +91,12 @@ class TransportGroupoidAggregator:
     defect.  A finite threshold decision is not invariant under general
     non-orthogonal changes of frame; it must not be interpreted as a canonical
     cohomological verdict.
+
+    ``karcher_tol`` is forwarded as ``tol`` to
+    :func:`groupoid.manifold.karcher_mean`, whose Notes state which exit of the
+    Karcher iteration bounds the Riemannian gradient norm of the weighted
+    Frechet function at the returned mean. Rounds computed before v0.1.0.dev10
+    used ``1e-6``.
     """
 
     manifold: object
@@ -99,6 +105,7 @@ class TransportGroupoidAggregator:
     consistency_threshold: float = 1e-6
     track_divergence: bool = False
     morphisms: dict[tuple[str, str], Morphism] = field(default_factory=dict)
+    karcher_tol: float = DEFAULT_KARCHER_TOL
     _round_idx: int = field(default=0, init=False)
     _prev_divergence: _persistence.PersistenceSummary | None = field(
         default=None, init=False, repr=False
@@ -356,7 +363,9 @@ class TransportGroupoidAggregator:
             )
             # Do not commit divergence until the full round succeeds.
 
-        global_params = karcher_mean(self.manifold, param_stack, weights=normalized_weights)
+        global_params = karcher_mean(
+            self.manifold, param_stack, weights=normalized_weights, tol=self.karcher_tol
+        )
         self._require_manifold_point(global_params, context="Karcher mean output")
 
         local_updates: dict[str, npt.NDArray[np.float64]] = {}

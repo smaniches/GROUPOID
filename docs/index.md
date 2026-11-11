@@ -18,7 +18,7 @@ norm; see the correction notice for the exact construct and assumptions.
 
 | Module | Description | Test coverage |
 |---|---|---|
-| `groupoid.manifold` | Karcher mean via geomstats FrechetMean | Hypothesis (500 examples) |
+| `groupoid.manifold` | Karcher mean via geomstats FrechetMean, with a documented stopping contract (gradient criterion with default `tol=1e-12`, plus variance and iteration-limit exits) | Hypothesis (500 examples); accuracy against a symmetric ring's exact mean and an independent numpy minimizer; gradient-criterion bound `sqrt(tol * dim)` on test inputs |
 | `groupoid.groupoid` | Matrix-labelled morphism composition, inverse | Hypothesis (500 examples) |
 | `groupoid.cohomology` | Cycle-basis holonomy defect; deprecated `compute_h1` compatibility alias | Coboundary zero, analytic nonzero cases, same-basis reference, basis/gauge regressions, reciprocal-edge invariant |
 | `groupoid.sheaf` | Cellular sheaf, restriction maps | Hypothesis (500 examples) |
